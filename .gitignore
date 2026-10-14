@@ -1,0 +1,36 @@
+# Dependencies and local Expo state
+node_modules/
+.expo/
+
+# Generated output
+dist/
+web-build/
+coverage/
+*.tsbuildinfo
+
+# Generated native projects (Expo managed workflow)
+/android/
+/ios/
+
+# Environment variables and signing credentials
+.env*
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Logs and OS files
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+*.orig.*
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local editor settings
+.idea/
+.vscode/
