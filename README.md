@@ -10,6 +10,8 @@ Initial project setup only. The app currently displays the course starter's coun
 
 Android is the required course platform. iOS is optional and can also be used for development testing.
 
+See the [project plan](docs/PROJECT_PLAN.md) for the proposed stack, course requirements and meeting decisions, and [GitHub issues](https://github.com/YannPolini/komori/issues) for the implementation backlog.
+
 ## Starter and framework
 
 Based on the [official FHTW-CPD React Native / Expo template](https://github.com/FHTW-CPD/starter-react-native-expo), revision `c13dce216551ca96805b9c6d4da041a7516be06a`. Its `App.tsx` and strict TypeScript configuration are preserved. The starter files were imported into the team's existing empty repository.
