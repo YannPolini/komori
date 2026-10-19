@@ -4,6 +4,8 @@ Anime discovery and tracking app for Cross Platform Development, WS2026.
 
 **Team:** Yann Polini ([@YannPolini](https://github.com/YannPolini)) and Diego Traxler, Group G.
 
+[Kanban board](https://github.com/users/YannPolini/projects/6/views/1)
+
 ## Current status
 
 Initial project setup only. The app currently displays the course starter's counter screen. Komori's discovery, tracking, accounts, reminders and offline features are planned and are not implemented yet.
