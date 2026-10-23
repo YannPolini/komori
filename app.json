@@ -4,6 +4,13 @@
     "slug": "komori",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic"
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "komori",
+    "web": {
+      "bundler": "metro"
+    }
   }
 }
