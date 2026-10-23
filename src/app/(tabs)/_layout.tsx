@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
+import { AppHeader } from '../../components/AppHeader';
 import { colors } from '../../theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -16,7 +17,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        header: () => <AppHeader />,
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
