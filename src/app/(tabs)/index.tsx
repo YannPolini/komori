@@ -2,15 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AnimeCard } from '../../components/AnimeCard';
+import { ScreenState } from '../../components/ScreenState';
 import { SectionHeader } from '../../components/SectionHeader';
+import { useCatalog } from '../../features/catalog/useCatalog';
+import type { Anime } from '../../features/catalog/types';
 import { colors, radius, spacing } from '../../theme';
-import { GENRES, MOCK_ANIME, MOCK_STATUS } from '../../mock/anime';
+import { GENRES, MOCK_STATUS } from '../../mock/anime';
 
-const suggestions = MOCK_ANIME.slice(0, 4);
-const releases = MOCK_ANIME.filter((a) => a.airingStatus === 'finished').slice(4, 8);
-const upcoming = MOCK_ANIME.filter((a) => a.airingStatus === 'upcoming');
-
-function Row({ data }: { data: typeof MOCK_ANIME }) {
+function Row({ data }: { data: Anime[] }) {
   return (
     <FlatList
       horizontal
@@ -24,6 +23,12 @@ function Row({ data }: { data: typeof MOCK_ANIME }) {
 }
 
 export default function Home() {
+  const catalog = useCatalog();
+  const anime = catalog.status === 'ready' ? catalog.anime : [];
+  const suggestions = anime.slice(0, 4);
+  const releases = anime.filter((a) => a.airingStatus === 'finished').slice(4, 8);
+  const upcoming = anime.filter((a) => a.airingStatus === 'upcoming');
+
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
       <Pressable
@@ -36,14 +41,22 @@ export default function Home() {
         <Text style={styles.searchText}>Search anime</Text>
       </Pressable>
 
-      <SectionHeader title="Suggested for you" />
-      <Row data={suggestions} />
+      {catalog.status === 'loading' && <ScreenState kind="loading" />}
+      {catalog.status === 'error' && (
+        <ScreenState kind="error" message="Titles could not be loaded." onRetry={catalog.retry} />
+      )}
+      {catalog.status === 'ready' && (
+        <>
+          <SectionHeader title="Suggested for you" />
+          <Row data={suggestions} />
 
-      <SectionHeader title="New releases" onSeeAll={() => router.navigate('/discover')} />
-      <Row data={releases} />
+          <SectionHeader title="New releases" onSeeAll={() => router.navigate('/discover')} />
+          <Row data={releases} />
 
-      <SectionHeader title="Upcoming" onSeeAll={() => router.navigate('/discover')} />
-      <Row data={upcoming} />
+          <SectionHeader title="Upcoming" onSeeAll={() => router.navigate('/discover')} />
+          <Row data={upcoming} />
+        </>
+      )}
 
       <SectionHeader title="Genres" />
       <View style={styles.chips}>

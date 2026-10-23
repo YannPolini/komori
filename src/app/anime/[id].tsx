@@ -3,13 +3,19 @@ import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { ScreenState } from '../../components/ScreenState';
-import { getAnime } from '../../mock/anime';
+import { useCatalog } from '../../features/catalog/useCatalog';
 import { colors, radius, spacing } from '../../theme';
 
 export default function Details() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const anime = getAnime(Number(id));
+  const catalog = useCatalog();
 
+  if (catalog.status === 'loading') return <ScreenState kind="loading" />;
+  if (catalog.status === 'error') {
+    return <ScreenState kind="error" message="This title could not be loaded." onRetry={catalog.retry} />;
+  }
+
+  const anime = catalog.anime.find((a) => a.id === Number(id));
   if (!anime) return <ScreenState kind="empty" message="This title could not be found." />;
 
   return (

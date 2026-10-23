@@ -3,16 +3,18 @@ import { useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { AnimeCard } from '../../components/AnimeCard';
 import { ScreenState } from '../../components/ScreenState';
-import { GENRES, MOCK_ANIME, MOCK_STATUS } from '../../mock/anime';
+import { useCatalog } from '../../features/catalog/useCatalog';
+import { GENRES, MOCK_STATUS } from '../../mock/anime';
 import { colors, radius, spacing } from '../../theme';
 
 export default function Discover() {
   const [query, setQuery] = useState('');
   const [genre, setGenre] = useState<string | null>(null);
+  const catalog = useCatalog();
   const { width } = useWindowDimensions();
   const cardWidth = (width - spacing.md * 3) / 2;
 
-  const results = MOCK_ANIME.filter(
+  const results = (catalog.status === 'ready' ? catalog.anime : []).filter(
     (a) =>
       a.title.toLowerCase().includes(query.trim().toLowerCase()) &&
       (!genre || a.genres.includes(genre)),
@@ -51,15 +53,21 @@ export default function Discover() {
         </ScrollView>
       </View>
 
-      <FlatList
-        data={results}
-        keyExtractor={(a) => String(a.id)}
-        numColumns={2}
-        columnWrapperStyle={{ gap: spacing.md }}
-        contentContainerStyle={styles.grid}
-        renderItem={({ item }) => <AnimeCard anime={item} status={MOCK_STATUS[item.id]} width={cardWidth} />}
-        ListEmptyComponent={<ScreenState kind="empty" message="No titles match your search." />}
-      />
+      {catalog.status === 'loading' && <ScreenState kind="loading" />}
+      {catalog.status === 'error' && (
+        <ScreenState kind="error" message="Titles could not be loaded." onRetry={catalog.retry} />
+      )}
+      {catalog.status === 'ready' && (
+        <FlatList
+          data={results}
+          keyExtractor={(a) => String(a.id)}
+          numColumns={2}
+          columnWrapperStyle={{ gap: spacing.md }}
+          contentContainerStyle={styles.grid}
+          renderItem={({ item }) => <AnimeCard anime={item} status={MOCK_STATUS[item.id]} width={cardWidth} />}
+          ListEmptyComponent={<ScreenState kind="empty" message="No titles match your search." />}
+        />
+      )}
     </View>
   );
 }

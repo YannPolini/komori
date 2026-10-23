@@ -31,5 +31,3 @@ export const MOCK_ANIME: Anime[] = [
 export const MOCK_STATUS: Record<number, WatchStatus> = { 1: 'watching', 3: 'watched', 4: 'plan' };
 
 export const GENRES = ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Mystery', 'Sci-Fi', 'Slice of Life', 'Sports'];
-
-export const getAnime = (id: number) => MOCK_ANIME.find((a) => a.id === id);
