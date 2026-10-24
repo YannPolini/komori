@@ -11,6 +11,13 @@ export const colors = {
   warning: '#B7791F',
 };
 
+// Watch status colors, always shown together with the status label.
+export const statusColors = {
+  plan: { text: '#2F5F8A', background: '#E3EDF7' },
+  watching: { text: '#8A5A12', background: '#FBEFD9' },
+  watched: { text: colors.primaryDark, background: colors.primarySoft },
+};
+
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 export const radius = { sm: 8, md: 16, pill: 999 };
 

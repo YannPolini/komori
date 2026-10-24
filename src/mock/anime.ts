@@ -1,4 +1,4 @@
-import type { Anime, WatchStatus } from '../features/catalog/types';
+import type { Anime } from '../features/catalog/types';
 
 // Mock data, replaced by the Jikan catalog in the catalog issue.
 const lorem =
@@ -27,7 +27,5 @@ export const MOCK_ANIME: Anime[] = [
   make(11, 'Planetes', ['Sci-Fi', 'Drama'], 8.2, 2003),
   make(12, 'Barakamon', ['Slice of Life', 'Comedy'], 8.4, 2014),
 ];
-
-export const MOCK_STATUS: Record<number, WatchStatus> = { 1: 'watching', 3: 'watched', 4: 'plan' };
 
 export const GENRES = ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Mystery', 'Sci-Fi', 'Slice of Life', 'Sports'];
