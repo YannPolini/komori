@@ -7,7 +7,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import { useCatalog } from '../../features/catalog/useCatalog';
 import type { Anime } from '../../features/catalog/types';
 import { colors, radius, spacing } from '../../theme';
-import { GENRES, MOCK_STATUS } from '../../mock/anime';
+import { GENRES } from '../../mock/anime';
 
 function Row({ data }: { data: Anime[] }) {
   return (
@@ -17,7 +17,7 @@ function Row({ data }: { data: Anime[] }) {
       keyExtractor={(a) => String(a.id)}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.rowContent}
-      renderItem={({ item }) => <AnimeCard anime={item} status={MOCK_STATUS[item.id]} width={140} />}
+      renderItem={({ item }) => <AnimeCard anime={item} width={140} />}
     />
   );
 }

@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { AnimeCard } from '../../components/AnimeCard';
 import { ScreenState } from '../../components/ScreenState';
+import { SearchField } from '../../components/SearchField';
 import { useCatalog } from '../../features/catalog/useCatalog';
-import { GENRES, MOCK_STATUS } from '../../mock/anime';
+import { GENRES } from '../../mock/anime';
 import { colors, radius, spacing } from '../../theme';
 
 export default function Discover() {
@@ -22,17 +22,7 @@ export default function Discover() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={styles.search}>
-        <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search anime"
-          placeholderTextColor={colors.textMuted}
-          accessibilityLabel="Search anime"
-          style={styles.input}
-        />
-      </View>
+      <SearchField value={query} onChangeText={setQuery} placeholder="Search anime" />
 
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -64,7 +54,7 @@ export default function Discover() {
           numColumns={2}
           columnWrapperStyle={{ gap: spacing.md }}
           contentContainerStyle={styles.grid}
-          renderItem={({ item }) => <AnimeCard anime={item} status={MOCK_STATUS[item.id]} width={cardWidth} />}
+          renderItem={({ item }) => <AnimeCard anime={item} width={cardWidth} />}
           ListEmptyComponent={<ScreenState kind="empty" message="No titles match your search." />}
         />
       )}
@@ -73,19 +63,6 @@ export default function Discover() {
 }
 
 const styles = StyleSheet.create({
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 48,
-    margin: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  input: { flex: 1, fontSize: 16, color: colors.text, minHeight: 44 },
   chips: { paddingHorizontal: spacing.md, gap: spacing.sm, paddingBottom: spacing.sm },
   chip: {
     minHeight: 44,

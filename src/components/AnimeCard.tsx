@@ -1,25 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { WATCH_STATUS_LABEL, type Anime, type WatchStatus } from '../features/catalog/types';
+import { WATCH_STATUS_LABEL, type Anime } from '../features/catalog/types';
+import { useLibrary } from '../features/library/LibraryProvider';
 import { colors, radius, shadow, spacing } from '../theme';
+import { StatusBadge } from './StatusBadge';
 
 interface Props {
   anime: Anime;
-  status?: WatchStatus;
   width?: number;
 }
 
-export function AnimeCard({ anime, status, width }: Props) {
+export function AnimeCard({ anime, width }: Props) {
+  const library = useLibrary();
+  const status = library.state.status === 'ready' ? library.state.profile.statuses[anime.id] : undefined;
+  const label = `${anime.title}${status ? `, ${WATCH_STATUS_LABEL[status]}` : ''}, open details`;
+
+  // The save button is also offered as an accessibility action, because screen readers
+  // treat the whole card as one element.
   return (
     <Link href={{ pathname: '/anime/[id]', params: { id: anime.id } }} asChild>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${anime.title}, open details`}
+        accessibilityLabel={label}
+        accessibilityActions={status ? [] : [{ name: 'quickSave', label: 'Add to Plan to watch' }]}
+        onAccessibilityAction={(e) => e.nativeEvent.actionName === 'quickSave' && library.quickSave(anime.id)}
         style={StyleSheet.flatten([styles.card, width ? { width } : { flex: 1 }])}
       >
         <View style={styles.cover}>
           <Ionicons name="image-outline" size={32} color={colors.textMuted} />
+          {library.state.status === 'ready' && (
+            <Pressable
+              onPress={() => library.quickSave(anime.id)}
+              disabled={!!status}
+              accessibilityRole="button"
+              accessibilityLabel={status ? `Saved as ${WATCH_STATUS_LABEL[status]}` : 'Add to Plan to watch'}
+              hitSlop={6}
+              style={styles.save}
+            >
+              <Ionicons name={status ? 'bookmark' : 'bookmark-outline'} size={18} color={colors.primaryDark} />
+            </Pressable>
+          )}
           {anime.score != null && (
             <View style={styles.score}>
               <Ionicons name="star-outline" size={12} color={colors.text} />
@@ -35,8 +56,8 @@ export function AnimeCard({ anime, status, width }: Props) {
             {anime.year ?? 'Date unknown'} · {anime.genres[0]}
           </Text>
           {status && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{WATCH_STATUS_LABEL[status]}</Text>
+            <View style={{ marginTop: spacing.xs }}>
+              <StatusBadge status={status} />
             </View>
           )}
         </View>
@@ -69,13 +90,15 @@ const styles = StyleSheet.create({
   body: { padding: spacing.sm + 2, gap: 2 },
   title: { fontSize: 15, fontWeight: '600', color: colors.text },
   meta: { fontSize: 12, color: colors.textMuted },
-  badge: {
-    alignSelf: 'flex-start',
-    marginTop: spacing.xs,
-    backgroundColor: colors.primarySoft,
+  save: {
+    position: 'absolute',
+    top: spacing.xs,
+    left: spacing.xs,
+    width: 38,
+    height: 38,
     borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  badgeText: { fontSize: 11, fontWeight: '600', color: colors.primaryDark },
 });

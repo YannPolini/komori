@@ -5,7 +5,7 @@ import { Button } from './Button';
 
 type Props =
   | { kind: 'loading' }
-  | { kind: 'empty'; message: string }
+  | { kind: 'empty'; message: string; action?: { label: string; onPress: () => void } }
   | { kind: 'error'; message: string; onRetry: () => void };
 
 export function ScreenState(props: Props) {
@@ -26,6 +26,7 @@ export function ScreenState(props: Props) {
       />
       <Text style={styles.message}>{props.message}</Text>
       {props.kind === 'error' && <Button label="Retry" onPress={props.onRetry} />}
+      {props.kind === 'empty' && props.action && <Button label={props.action.label} onPress={props.action.onPress} />}
     </View>
   );
 }
