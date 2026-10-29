@@ -1,19 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useMemo } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AnimeCard } from '../../components/AnimeCard';
 import { ScreenState } from '../../components/ScreenState';
 import { SectionHeader } from '../../components/SectionHeader';
-import { useCatalog } from '../../features/catalog/useCatalog';
-import type { Anime } from '../../features/catalog/types';
+import { isoDate, today } from '../../features/catalog/dates';
+import { newReleasesFeed, searchFeed, upcomingFeed, type Feed } from '../../features/catalog/feeds';
+import { useFeed, useGenres } from '../../features/catalog/useCatalog';
 import { colors, radius, spacing } from '../../theme';
-import { GENRES } from '../../mock/anime';
+import type { DiscoverMode } from './discover';
 
-function Row({ data }: { data: Anime[] }) {
+// A preview of the first titles of a feed, with its own loading and error state.
+function FeedRow<C>({ feed, count }: { feed: Feed<C>; count: number }) {
+  const state = useFeed(feed);
+  if (state.status === 'loading') return <ScreenState kind="loading" />;
+  if (state.status === 'error') {
+    return <ScreenState kind="error" message="Titles could not be loaded." onRetry={state.retry} />;
+  }
+  if (!state.items.length) return <Text style={styles.empty}>No titles right now.</Text>;
   return (
     <FlatList
       horizontal
-      data={data}
+      data={state.items.slice(0, count)}
       keyExtractor={(a) => String(a.id)}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.rowContent}
@@ -22,12 +31,23 @@ function Row({ data }: { data: Anime[] }) {
   );
 }
 
+const openDiscover = (mode: DiscoverMode, genre = '') =>
+  router.navigate({ pathname: '/discover', params: { mode, genre, q: '' } });
+
 export default function Home() {
-  const catalog = useCatalog();
-  const anime = catalog.status === 'ready' ? catalog.anime : [];
-  const suggestions = anime.slice(0, 4);
-  const releases = anime.filter((a) => a.airingStatus === 'finished').slice(4, 8);
-  const upcoming = anime.filter((a) => a.airingStatus === 'upcoming');
+  const day = isoDate(today());
+  // Suggestions come with the recommendations issue. Until then Home shows popular titles,
+  // the same feed as the default Discover search.
+  const feeds = useMemo(
+    () => ({
+      popular: searchFeed({ query: '', genreId: null, sort: 'popularity' }),
+      releases: newReleasesFeed(today()),
+      upcoming: upcomingFeed(today()),
+    }),
+    [day],
+  );
+  const genres = useGenres();
+  const shortcuts = genres.status === 'ready' ? [...genres.genres].sort((a, b) => b.count - a.count).slice(0, 6) : [];
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
@@ -35,34 +55,35 @@ export default function Home() {
         style={styles.search}
         accessibilityRole="search"
         accessibilityLabel="Search anime"
-        onPress={() => router.navigate('/discover')}
+        onPress={() => openDiscover('search')}
       >
         <Ionicons name="search-outline" size={20} color={colors.textMuted} />
         <Text style={styles.searchText}>Search anime</Text>
       </Pressable>
 
-      {catalog.status === 'loading' && <ScreenState kind="loading" />}
-      {catalog.status === 'error' && (
-        <ScreenState kind="error" message="Titles could not be loaded." onRetry={catalog.retry} />
-      )}
-      {catalog.status === 'ready' && (
-        <>
-          <SectionHeader title="Suggested for you" />
-          <Row data={suggestions} />
+      <SectionHeader title="Suggested for you" />
+      <FeedRow feed={feeds.popular} count={4} />
 
-          <SectionHeader title="New releases" onSeeAll={() => router.navigate('/discover')} />
-          <Row data={releases} />
+      <SectionHeader title="New releases" onSeeAll={() => openDiscover('new')} />
+      <FeedRow feed={feeds.releases} count={3} />
 
-          <SectionHeader title="Upcoming" onSeeAll={() => router.navigate('/discover')} />
-          <Row data={upcoming} />
-        </>
-      )}
+      <SectionHeader title="Upcoming" onSeeAll={() => openDiscover('upcoming')} />
+      <FeedRow feed={feeds.upcoming} count={3} />
 
       <SectionHeader title="Genres" />
+      {genres.status === 'error' && (
+        <ScreenState kind="error" message="Genres could not be loaded." onRetry={genres.retry} />
+      )}
       <View style={styles.chips}>
-        {GENRES.slice(0, 6).map((g) => (
-          <Pressable key={g} style={styles.chip} onPress={() => router.navigate('/discover')}>
-            <Text style={styles.chipText}>{g}</Text>
+        {shortcuts.map((g) => (
+          <Pressable
+            key={g.id}
+            style={styles.chip}
+            accessibilityRole="button"
+            accessibilityLabel={`Browse ${g.name}`}
+            onPress={() => openDiscover('search', String(g.id))}
+          >
+            <Text style={styles.chipText}>{g.name}</Text>
           </Pressable>
         ))}
       </View>
@@ -95,4 +116,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
   },
   chipText: { fontSize: 14, fontWeight: '600', color: colors.primaryDark },
+  empty: { fontSize: 14, color: colors.textMuted, paddingHorizontal: spacing.md },
 });

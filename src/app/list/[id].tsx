@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { cardMeta } from '../../components/AnimeCard';
+import { Button } from '../../components/Button';
+import { Cover } from '../../components/Cover';
 import { OptionSheet } from '../../components/OptionSheet';
 import { ScreenState } from '../../components/ScreenState';
 import { SearchField } from '../../components/SearchField';
 import { StatusBadge } from '../../components/StatusBadge';
-import { findAnime } from '../../features/catalog/lookup';
 import { WATCH_STATUS_LABEL, type Anime } from '../../features/catalog/types';
+import { useAnimeEntries } from '../../features/catalog/useCatalog';
 import { useLibrary } from '../../features/library/LibraryProvider';
 import { isBuiltInList, listAnimeIds, WATCH_STATUSES } from '../../features/library/rules';
 import { colors, radius, shadow, spacing } from '../../theme';
@@ -28,6 +31,8 @@ export default function ListDetail() {
     navigation.setOptions({ title: name ?? '' });
   }, [navigation, name]);
 
+  const entries = useAnimeEntries(profile && name != null ? listAnimeIds(profile, id) : []);
+
   if (library.state.status === 'loading') return <ScreenState kind="loading" />;
   if (library.state.status === 'error') {
     return <ScreenState kind="error" message="This list could not be loaded." onRetry={library.retry} />;
@@ -35,11 +40,16 @@ export default function ListDetail() {
 
   if (!profile || name == null) return <ScreenState kind="empty" message="This list no longer exists." />;
 
-  // Titles the catalog lookup cannot resolve are left out of the view.
-  const all = listAnimeIds(profile, id)
-    .map(findAnime)
-    .filter((a): a is Anime => a != null)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  // Titles still loading from the catalog are added as they arrive.
+  const all = [...entries.anime].sort((a, b) => a.title.localeCompare(b.title));
+  const pending = entries.loading ? (
+    <ActivityIndicator color={colors.primary} style={{ padding: spacing.md }} accessibilityLabel="Loading titles" />
+  ) : entries.failed ? (
+    <View style={styles.failed}>
+      <Text style={styles.meta}>{all.length ? 'Some titles' : 'Titles'} could not be loaded.</Text>
+      <Button label="Retry" onPress={entries.retry} />
+    </View>
+  ) : null;
   const visible = all.filter((a) => a.title.toLowerCase().includes(query.trim().toLowerCase()));
 
   const moveTargets = builtIn
@@ -73,8 +83,9 @@ export default function ListDetail() {
         keyExtractor={(a) => String(a.id)}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        ListFooterComponent={pending}
         ListEmptyComponent={
-          all.length === 0 ? (
+          pending ? null : all.length === 0 ? (
             <ScreenState
               kind="empty"
               message={`${name} has no titles yet.`}
@@ -94,16 +105,12 @@ export default function ListDetail() {
                 accessibilityRole="button"
                 accessibilityLabel={`${item.title}${status ? `, ${WATCH_STATUS_LABEL[status]}` : ''}, open details`}
               >
-                <View style={styles.cover}>
-                  <Ionicons name="image-outline" size={20} color={colors.textMuted} />
-                </View>
+                <Cover uri={item.imageUrl} iconSize={20} style={styles.cover} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={styles.title} numberOfLines={2}>
                     {item.title}
                   </Text>
-                  <Text style={styles.meta}>
-                    {item.year ?? 'Date unknown'} · {item.genres[0]}
-                  </Text>
+                  <Text style={styles.meta}>{cardMeta(item)}</Text>
                   {status && <StatusBadge status={status} />}
                 </View>
               </Pressable>
@@ -151,14 +158,8 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.sm },
-  cover: {
-    width: 48,
-    height: 64,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cover: { width: 48, height: 64, borderRadius: radius.sm },
+  failed: { gap: spacing.sm, paddingTop: spacing.sm },
   title: { fontSize: 15, fontWeight: '600', color: colors.text },
   meta: { fontSize: 12, color: colors.textMuted },
   action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

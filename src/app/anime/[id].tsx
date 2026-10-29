@@ -3,17 +3,43 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
+import { Cover } from '../../components/Cover';
 import { ListNameDialog } from '../../components/ListNameDialog';
 import { ScreenState } from '../../components/ScreenState';
-import { WATCH_STATUS_LABEL } from '../../features/catalog/types';
-import { useCatalog } from '../../features/catalog/useCatalog';
+import { formatDate } from '../../features/catalog/dates';
+import { WATCH_STATUS_LABEL, type Anime } from '../../features/catalog/types';
+import { useAnime } from '../../features/catalog/useCatalog';
 import { useLibrary } from '../../features/library/LibraryProvider';
 import { WATCH_STATUSES } from '../../features/library/rules';
 import { colors, radius, spacing, statusColors } from '../../theme';
 
+const AIRING_LABEL: Record<Anime['airingStatus'], string> = {
+  airing: 'Currently airing',
+  finished: 'Finished airing',
+  upcoming: 'Not yet aired',
+};
+
+function aired(anime: Anime) {
+  const start = formatDate(anime.startDate);
+  if (anime.airingStatus === 'upcoming') return anime.startDate ? `Premieres ${start}` : 'Premiere date unknown';
+  if (anime.airingStatus === 'airing' || !anime.endDate) return start;
+  const end = formatDate(anime.endDate);
+  return start === end ? start : `${start} – ${end}`;
+}
+
+// Catalog facts, with missing values marked instead of left out.
+function facts(anime: Anime): [string, string][] {
+  return [
+    ['Status', AIRING_LABEL[anime.airingStatus]],
+    ['Aired', aired(anime)],
+    ['Episodes', anime.episodes != null ? String(anime.episodes) : 'Unknown'],
+    ['Catalog score', anime.score != null ? `${anime.score.toFixed(2)} / 10` : 'Not scored yet'],
+  ];
+}
+
 export default function Details() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const catalog = useCatalog();
+  const catalog = useAnime(Number(id));
   const library = useLibrary();
   const [creating, setCreating] = useState(false);
 
@@ -24,9 +50,9 @@ export default function Details() {
   if (catalog.status === 'error') {
     return <ScreenState kind="error" message="This title could not be loaded." onRetry={catalog.retry} />;
   }
+  if (catalog.status === 'notFound') return <ScreenState kind="empty" message="This title could not be found." />;
 
-  const anime = catalog.anime.find((a) => a.id === Number(id));
-  if (!anime) return <ScreenState kind="empty" message="This title could not be found." />;
+  const anime = catalog.anime;
 
   const profile = library.state.profile;
   const status = profile.statuses[anime.id];
@@ -53,22 +79,31 @@ export default function Details() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.cover}>
-        <Ionicons name="image-outline" size={48} color={colors.textMuted} />
+      <View style={styles.header}>
+        <Cover uri={anime.imageUrl} iconSize={40} style={styles.cover} />
+        <View style={styles.headerText}>
+          <Text style={styles.title} accessibilityRole="header">
+            {anime.title}
+          </Text>
+          {facts(anime).map(([label, value]) => (
+            <View key={label} accessible accessibilityLabel={`${label}: ${value}`}>
+              <Text style={styles.factLabel}>{label}</Text>
+              <Text style={styles.factValue}>{value}</Text>
+            </View>
+          ))}
+        </View>
       </View>
-      <Text style={styles.title} accessibilityRole="header">
-        {anime.title}
-      </Text>
-      <Text style={styles.meta}>
-        {anime.year ?? 'Date unknown'} · Catalog score {anime.score != null ? `${anime.score.toFixed(1)} / 10` : 'n/a'}
-      </Text>
-      <View style={styles.genres}>
-        {anime.genres.map((g) => (
-          <View key={g} style={styles.genre}>
-            <Text style={styles.genreText}>{g}</Text>
-          </View>
-        ))}
-      </View>
+      {anime.genres.length > 0 ? (
+        <View style={styles.genres}>
+          {anime.genres.map((g) => (
+            <View key={g} style={styles.genre}>
+              <Text style={styles.genreText}>{g}</Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.meta}>No genres listed.</Text>
+      )}
       <Text style={styles.synopsis}>{anime.synopsis ?? 'No synopsis available.'}</Text>
 
       <Text style={styles.section} accessibilityRole="header">
@@ -140,14 +175,12 @@ export default function Details() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.md, gap: spacing.md },
-  cover: {
-    aspectRatio: 16 / 10,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { fontSize: 26, fontWeight: '800', color: colors.text },
+  header: { flexDirection: 'row', gap: spacing.md },
+  cover: { width: 128, aspectRatio: 225 / 320, borderRadius: radius.md },
+  headerText: { flex: 1, gap: spacing.sm },
+  title: { fontSize: 22, fontWeight: '800', color: colors.text },
+  factLabel: { fontSize: 12, color: colors.textMuted },
+  factValue: { fontSize: 14, fontWeight: '600', color: colors.text },
   meta: { fontSize: 14, color: colors.textMuted },
   genres: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   genre: { backgroundColor: colors.primarySoft, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6 },
