@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { CatalogError, jikan } from '../../services/jikan';
+import { anilist, CatalogError } from '../../services/anilist';
 import type { Feed } from './feeds';
 import { findAnime, rememberAnime } from './lookup';
-import type { Anime, Genre } from './types';
+import type { Anime } from './types';
 
 interface LoadedFeed {
   items: Anime[];
@@ -95,7 +95,7 @@ export function useAnime(id: number): AnimeState {
     if (findAnime(id) || !Number.isInteger(id)) return;
     let active = true;
     setResult(null);
-    jikan.getAnime(id).then(
+    anilist.getAnime(id).then(
       (anime) => {
         rememberAnime([anime]);
         if (active) setResult({ id });
@@ -132,7 +132,7 @@ export function useAnimeEntries(ids: number[]): AnimeEntries {
     let active = true;
     setState({ loading: true, failed: false });
     const requests = missingKey.split(',').map((id) =>
-      jikan.getAnime(Number(id)).then((anime) => {
+      anilist.getAnime(Number(id)).then((anime) => {
         rememberAnime([anime]);
         if (active) update();
       }),
@@ -154,9 +154,9 @@ export function useAnimeEntries(ids: number[]): AnimeEntries {
   };
 }
 
-let genres: Genre[] | null = null;
+let genres: string[] | null = null;
 
-export type GenresState = { status: 'loading' } | { status: 'error'; retry: () => void } | { status: 'ready'; genres: Genre[] };
+export type GenresState = { status: 'loading' } | { status: 'error'; retry: () => void } | { status: 'ready'; genres: string[] };
 
 export function useGenres(): GenresState {
   const [attempt, retry] = useReducer((n: number) => n + 1, 0);
@@ -167,7 +167,7 @@ export function useGenres(): GenresState {
     if (genres) return;
     let active = true;
     setFailed(false);
-    jikan.getGenres().then(
+    anilist.getGenres().then(
       (result) => {
         genres = result;
         if (active) update();

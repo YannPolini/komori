@@ -8,7 +8,7 @@ import { Chip } from '../../components/Chip';
 import { OptionSheet } from '../../components/OptionSheet';
 import { ScreenState } from '../../components/ScreenState';
 import { SearchField } from '../../components/SearchField';
-import { isoDate, today } from '../../features/catalog/dates';
+import { fuzzyDate, today } from '../../features/catalog/dates';
 import { newReleasesFeed, searchFeed, upcomingFeed, type Feed } from '../../features/catalog/feeds';
 import { CATALOG_SORT_LABEL, type CatalogSort } from '../../features/catalog/types';
 import { useDebouncedValue, useFeed, useGenres } from '../../features/catalog/useCatalog';
@@ -38,7 +38,7 @@ export default function Discover() {
   const params = useLocalSearchParams<Params>();
   const mode: DiscoverMode = params.mode === 'new' || params.mode === 'upcoming' ? params.mode : 'search';
   const query = params.q ?? '';
-  const genreId = params.genre ? Number(params.genre) : null;
+  const genre = params.genre || null;
   const sort: CatalogSort = params.sort && params.sort in CATALOG_SORT_LABEL ? params.sort : 'popularity';
 
   // The field updates at once, the search 400 ms after typing stops.
@@ -49,13 +49,13 @@ export default function Discover() {
   }, [debounced]);
   useEffect(() => setText((t) => (t.trim() === query.trim() ? t : query)), [query]);
 
-  const day = isoDate(today());
+  const day = fuzzyDate(today());
   const feed = useMemo<Feed<unknown>>(() => {
     if (mode === 'new') return newReleasesFeed(today());
     if (mode === 'upcoming') return upcomingFeed(today());
-    return searchFeed({ query, genreId, sort });
+    return searchFeed({ query, genre, sort });
     // `day` renews the release feeds after midnight.
-  }, [mode, query, genreId, sort, day]);
+  }, [mode, query, genre, sort, day]);
   const results = useFeed(feed);
   const genres = useGenres();
   const [sorting, setSorting] = useState(false);
@@ -104,10 +104,10 @@ export default function Discover() {
               {genres.status === 'ready' &&
                 genres.genres.map((g) => (
                   <Chip
-                    key={g.id}
-                    label={g.name}
-                    selected={g.id === genreId}
-                    onPress={() => router.setParams({ genre: g.id === genreId ? '' : String(g.id) })}
+                    key={g}
+                    label={g}
+                    selected={g === genre}
+                    onPress={() => router.setParams({ genre: g === genre ? '' : g })}
                   />
                 ))}
               {genres.status === 'error' && <Chip label="Load genres" selected={false} onPress={genres.retry} />}

@@ -5,7 +5,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { AnimeCard } from '../../components/AnimeCard';
 import { ScreenState } from '../../components/ScreenState';
 import { SectionHeader } from '../../components/SectionHeader';
-import { isoDate, today } from '../../features/catalog/dates';
+import { fuzzyDate, today } from '../../features/catalog/dates';
 import { newReleasesFeed, searchFeed, upcomingFeed, type Feed } from '../../features/catalog/feeds';
 import { useFeed, useGenres } from '../../features/catalog/useCatalog';
 import { colors, radius, spacing } from '../../theme';
@@ -31,23 +31,26 @@ function FeedRow<C>({ feed, count }: { feed: Feed<C>; count: number }) {
   );
 }
 
+// Genre shortcuts on Home, shown when the catalog offers them.
+const HOME_GENRES = ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Romance'];
+
 const openDiscover = (mode: DiscoverMode, genre = '') =>
   router.navigate({ pathname: '/discover', params: { mode, genre, q: '' } });
 
 export default function Home() {
-  const day = isoDate(today());
+  const day = fuzzyDate(today());
   // Suggestions come with the recommendations issue. Until then Home shows popular titles,
   // the same feed as the default Discover search.
   const feeds = useMemo(
     () => ({
-      popular: searchFeed({ query: '', genreId: null, sort: 'popularity' }),
+      popular: searchFeed({ query: '', genre: null, sort: 'popularity' }),
       releases: newReleasesFeed(today()),
       upcoming: upcomingFeed(today()),
     }),
     [day],
   );
   const genres = useGenres();
-  const shortcuts = genres.status === 'ready' ? [...genres.genres].sort((a, b) => b.count - a.count).slice(0, 6) : [];
+  const shortcuts = genres.status === 'ready' ? HOME_GENRES.filter((g) => genres.genres.includes(g)) : [];
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
@@ -77,13 +80,13 @@ export default function Home() {
       <View style={styles.chips}>
         {shortcuts.map((g) => (
           <Pressable
-            key={g.id}
+            key={g}
             style={styles.chip}
             accessibilityRole="button"
-            accessibilityLabel={`Browse ${g.name}`}
-            onPress={() => openDiscover('search', String(g.id))}
+            accessibilityLabel={`Browse ${g}`}
+            onPress={() => openDiscover('search', g)}
           >
-            <Text style={styles.chipText}>{g.name}</Text>
+            <Text style={styles.chipText}>{g}</Text>
           </Pressable>
         ))}
       </View>

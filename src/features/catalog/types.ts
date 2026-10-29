@@ -27,12 +27,6 @@ export interface Anime {
   airingStatus: 'airing' | 'finished' | 'upcoming';
 }
 
-export interface Genre {
-  id: number;
-  name: string;
-  count: number;
-}
-
 export type CatalogSort = 'popularity' | 'score' | 'title';
 
 export const CATALOG_SORT_LABEL: Record<CatalogSort, string> = {

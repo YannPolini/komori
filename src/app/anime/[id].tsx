@@ -33,7 +33,7 @@ function facts(anime: Anime): [string, string][] {
     ['Status', AIRING_LABEL[anime.airingStatus]],
     ['Aired', aired(anime)],
     ['Episodes', anime.episodes != null ? String(anime.episodes) : 'Unknown'],
-    ['Catalog score', anime.score != null ? `${anime.score.toFixed(2)} / 10` : 'Not scored yet'],
+    ['Catalog score', anime.score != null ? `${anime.score.toFixed(1)} / 10` : 'Not scored yet'],
   ];
 }
 

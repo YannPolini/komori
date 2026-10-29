@@ -11,12 +11,10 @@ export const today = (): CatalogDate => fromDate(new Date());
 export const addDays = (date: CatalogDate, days: number): CatalogDate =>
   fromDate(new Date(date.year, (date.month ?? 1) - 1, (date.day ?? 1) + days));
 
-const pad = (n: number) => String(n).padStart(2, '0');
+// YYYYMMDD, the format of AniList's date filters. Unknown parts are 0.
+export const fuzzyDate = (date: CatalogDate) => date.year * 10000 + (date.month ?? 0) * 100 + (date.day ?? 0);
 
-// YYYY-MM-DD, the format of Jikan's date filters.
-export const isoDate = (date: CatalogDate) => `${date.year}-${pad(date.month ?? 1)}-${pad(date.day ?? 1)}`;
-
-// Partial dates count as the first day of their month or year, like on the provider.
+// Partial dates count as the first day of their month or year.
 const dateValue = (date: CatalogDate) => date.year * 10000 + (date.month ?? 1) * 100 + (date.day ?? 1);
 
 export const compareDates = (a: CatalogDate, b: CatalogDate) => dateValue(a) - dateValue(b);
