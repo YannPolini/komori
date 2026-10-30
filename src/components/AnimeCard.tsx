@@ -1,10 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { formatDate } from '../features/catalog/dates';
 import { WATCH_STATUS_LABEL, type Anime } from '../features/catalog/types';
 import { useLibrary } from '../features/library/LibraryProvider';
 import { colors, radius, shadow, spacing } from '../theme';
+import { Cover } from './Cover';
 import { StatusBadge } from './StatusBadge';
+
+// Upcoming titles show their premiere date, others the year.
+export const cardMeta = (anime: Anime) =>
+  [anime.airingStatus === 'upcoming' ? formatDate(anime.startDate) : (anime.year ?? 'Date unknown'), anime.genres[0]]
+    .filter(Boolean)
+    .join(' · ');
 
 interface Props {
   anime: Anime;
@@ -27,8 +35,7 @@ export function AnimeCard({ anime, width }: Props) {
         onAccessibilityAction={(e) => e.nativeEvent.actionName === 'quickSave' && library.quickSave(anime.id)}
         style={StyleSheet.flatten([styles.card, width ? { width } : { flex: 1 }])}
       >
-        <View style={styles.cover}>
-          <Ionicons name="image-outline" size={32} color={colors.textMuted} />
+        <Cover uri={anime.imageUrl} iconSize={32} style={styles.cover}>
           {library.state.status === 'ready' && (
             <Pressable
               onPress={() => library.quickSave(anime.id)}
@@ -47,13 +54,13 @@ export function AnimeCard({ anime, width }: Props) {
               <Text style={styles.scoreText}>{anime.score.toFixed(1)}</Text>
             </View>
           )}
-        </View>
+        </Cover>
         <View style={styles.body}>
           <Text style={styles.title} numberOfLines={2}>
             {anime.title}
           </Text>
           <Text style={styles.meta} numberOfLines={1}>
-            {anime.year ?? 'Date unknown'} · {anime.genres[0]}
+            {cardMeta(anime)}
           </Text>
           {status && (
             <View style={{ marginTop: spacing.xs }}>
@@ -68,12 +75,7 @@ export function AnimeCard({ anime, width }: Props) {
 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden', ...shadow },
-  cover: {
-    aspectRatio: 3 / 4,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cover: { aspectRatio: 3 / 4 },
   score: {
     position: 'absolute',
     top: spacing.sm,

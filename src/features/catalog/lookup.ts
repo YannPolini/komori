@@ -1,8 +1,11 @@
-import { MOCK_ANIME } from '../../mock/anime';
 import type { Anime } from './types';
 
-// Resolves the anime IDs stored in personal lists. Backed by the mock data for now;
-// the catalog issue replaces it with cached catalog entries.
-const byId = new Map(MOCK_ANIME.map((a) => [a.id, a]));
+// Catalog entries loaded in this app session, by anime ID. Personal lists only store IDs
+// and resolve them here. The offline storage issue keeps these entries in SQLite.
+const byId = new Map<number, Anime>();
 
 export const findAnime = (id: number): Anime | undefined => byId.get(id);
+
+export function rememberAnime(anime: Anime[]) {
+  for (const a of anime) byId.set(a.id, a);
+}
