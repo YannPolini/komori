@@ -54,11 +54,11 @@ const MEDIA_FIELDS = `
 
 const SEARCH_QUERY = `
   query ($page: Int, $perPage: Int, $search: String, $genre: String, $sort: [MediaSort], $status: MediaStatus,
-         $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt) {
+         $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt, $id_in: [Int]) {
     Page(page: $page, perPage: $perPage) {
       pageInfo { hasNextPage }
       media(type: ANIME, isAdult: false, search: $search, genre: $genre, sort: $sort, status: $status,
-            startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser) { ${MEDIA_FIELDS} }
+            startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser, id_in: $id_in) { ${MEDIA_FIELDS} }
     }
   }`;
 
@@ -125,6 +125,8 @@ export interface MediaFilters {
   status?: string;
   startDate_greater?: number;
   startDate_lesser?: number;
+  // Loads these titles in one request, up to one page of them.
+  id_in?: number[];
 }
 
 export interface AnimeListPage {

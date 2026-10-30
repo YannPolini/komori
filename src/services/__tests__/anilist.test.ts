@@ -80,6 +80,14 @@ describe('anilist client', () => {
     expect(page.hasNextPage).toBe(true);
   });
 
+  it('loads several titles by ID in one request', async () => {
+    const { client, bodies } = setup([response(200, pageResponse([FRIEREN, ANNOUNCED]))]);
+    const page = await client.searchAnime({ id_in: [154587, 1], sort: ['ID'] }, 1, 50);
+    expect(bodies[0].variables).toEqual({ id_in: [154587, 1], sort: ['ID'], page: 1, perPage: 50 });
+    expect(bodies[0].query).toContain('id_in: $id_in');
+    expect(page.items).toHaveLength(2);
+  });
+
   it('returns an empty page for no matches', async () => {
     const { client } = setup([response(200, pageResponse([]))]);
     expect(await client.searchAnime({ search: 'zzzz', sort: [] }, 1)).toEqual({ items: [], hasNextPage: false });
