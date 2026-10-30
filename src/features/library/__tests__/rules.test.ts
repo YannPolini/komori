@@ -2,6 +2,8 @@ import { libraryReducer } from '../reducer';
 import { createMemoryRepository } from '../repository';
 import {
   addToList,
+  canRate,
+  clearRating,
   clearStatus,
   counts,
   createList,
@@ -11,9 +13,12 @@ import {
   quickSave,
   removeFromList,
   renameList,
+  setRating,
   setStatus,
+  togglePreferredGenre,
   validateListName,
 } from '../rules';
+import type { Anime } from '../../catalog/types';
 import { emptyProfile, type ProfileData } from '../types';
 import { randomUUID } from '../uuid';
 
@@ -54,7 +59,7 @@ describe('watch status', () => {
   it('removing a status keeps ratings and custom lists', () => {
     const p = profileWith({
       statuses: { 1: 'watched', 2: 'plan' },
-      ratings: { 1: 8 },
+      ratings: { 1: 4 },
       customLists: [{ id: 'a', name: 'Favourites', animeIds: [1] }],
     });
     const next = clearStatus(p, 1);
@@ -120,7 +125,7 @@ describe('custom lists', () => {
   });
 
   it('adding and removing titles keeps status and rating', () => {
-    const base = created(profileWith({ statuses: { 1: 'watching' }, ratings: { 1: 9 } }), 'A', 'a');
+    const base = created(profileWith({ statuses: { 1: 'watching' }, ratings: { 1: 5 } }), 'A', 'a');
     const added = addToList(base, 'a', 1);
     const removed = removeFromList(added, 'a', 1);
     for (const p of [added, removed]) {
@@ -138,7 +143,7 @@ describe('custom lists', () => {
   });
 
   it('deleting a list removes only the list and its memberships', () => {
-    let p = created(created(profileWith({ statuses: { 1: 'plan' }, ratings: { 1: 7 } }), 'A', 'a'), 'B', 'b');
+    let p = created(created(profileWith({ statuses: { 1: 'plan' }, ratings: { 1: 3 } }), 'A', 'a'), 'B', 'b');
     p = addToList(addToList(p, 'a', 1), 'b', 1);
     const next = deleteList(p, 'a');
     expect(next.customLists.map((l) => l.id)).toEqual(['b']);
@@ -175,4 +180,61 @@ it('creates distinct v4 UUIDs', () => {
   const a = randomUUID();
   expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   expect(randomUUID()).not.toBe(a);
+});
+
+describe('ratings', () => {
+  it('sets, changes and clears a rating from 1 to 5', () => {
+    let p = setRating(profileWith(), 1, 3);
+    expect(p.ratings).toEqual({ 1: 3 });
+    p = setRating(p, 1, 5);
+    expect(p.ratings).toEqual({ 1: 5 });
+    expect(clearRating(p, 1).ratings).toEqual({});
+  });
+
+  it('rejects values outside 1 to 5 and fractions', () => {
+    const p = profileWith({ ratings: { 1: 2 } });
+    for (const value of [0, 6, 2.5, -1, NaN]) expect(setRating(p, 1, value)).toBe(p);
+  });
+
+  it('leaves watch status and lists unchanged', () => {
+    const p = profileWith({ statuses: { 1: 'watched' }, customLists: [{ id: 'a', name: 'A', animeIds: [1] }] });
+    const rated = setRating(p, 1, 4);
+    expect(rated.statuses).toBe(p.statuses);
+    expect(rated.customLists).toBe(p.customLists);
+    expect(clearRating(rated, 1).statuses).toBe(p.statuses);
+  });
+
+  it('only allows rating released titles', () => {
+    const now = { year: 2026, month: 10, day: 29 };
+    const title = (patch: Partial<Anime>): Anime => ({
+      id: 1,
+      title: 'T',
+      imageUrl: null,
+      synopsis: null,
+      genres: [],
+      score: null,
+      year: null,
+      startDate: null,
+      endDate: null,
+      episodes: null,
+      airingStatus: 'finished',
+      ...patch,
+    });
+    expect(canRate(title({ startDate: { year: 2026, month: 10, day: 29 }, airingStatus: 'upcoming' }), now)).toBe(true);
+    expect(canRate(title({ startDate: { year: 2026, month: 10, day: 30 }, airingStatus: 'airing' }), now)).toBe(false);
+    expect(canRate(title({ startDate: null, airingStatus: 'upcoming' }), now)).toBe(false);
+    expect(canRate(title({ startDate: { year: 2027, month: null, day: null }, airingStatus: 'upcoming' }), now)).toBe(false);
+    expect(canRate(title({ startDate: null, airingStatus: 'airing' }), now)).toBe(true);
+  });
+});
+
+describe('preferred genres', () => {
+  it('adds and removes genres, at most three', () => {
+    let p = profileWith();
+    for (const g of ['Action', 'Drama', 'Comedy']) p = togglePreferredGenre(p, g);
+    expect(togglePreferredGenre(p, 'Romance')).toBe(p);
+    p = togglePreferredGenre(p, 'Drama');
+    expect(p.genres).toEqual(['Action', 'Comedy']);
+    expect(togglePreferredGenre(p, 'Romance').genres).toEqual(['Action', 'Comedy', 'Romance']);
+  });
 });

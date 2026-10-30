@@ -5,5 +5,6 @@ import { emptyProfile, type ProfileData } from '../features/library/types';
 export const MOCK_PROFILE: ProfileData = {
   ...emptyProfile(),
   statuses: { 1: 'watching', 199: 'watched', 128547: 'plan' },
+  ratings: { 199: 5 },
   customLists: [{ id: '8d3f6c1e-2b7a-4c59-9e0d-5a1b2c3d4e5f', name: 'Cozy evenings', animeIds: [457, 20722] }],
 };

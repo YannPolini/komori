@@ -14,6 +14,9 @@ export type LibraryAction =
   | { type: 'setStatus'; animeId: number; status: WatchStatus }
   | { type: 'clearStatus'; animeId: number }
   | { type: 'quickSave'; animeId: number }
+  | { type: 'setRating'; animeId: number; rating: number }
+  | { type: 'clearRating'; animeId: number }
+  | { type: 'togglePreferredGenre'; genre: string }
   | { type: 'createList'; id: string; name: string }
   | { type: 'renameList'; listId: string; name: string }
   | { type: 'deleteList'; listId: string }
@@ -30,6 +33,12 @@ function apply(profile: ProfileData, action: LibraryAction): ProfileData {
       return rules.clearStatus(profile, action.animeId);
     case 'quickSave':
       return rules.quickSave(profile, action.animeId);
+    case 'setRating':
+      return rules.setRating(profile, action.animeId, action.rating);
+    case 'clearRating':
+      return rules.clearRating(profile, action.animeId);
+    case 'togglePreferredGenre':
+      return rules.togglePreferredGenre(profile, action.genre);
     case 'createList': {
       const result = rules.createList(profile, action.name, action.id);
       return result.ok ? result.profile : profile;

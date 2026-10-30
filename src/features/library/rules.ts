@@ -1,10 +1,13 @@
-import { WATCH_STATUS_LABEL, type WatchStatus } from '../catalog/types';
+import { isReleased } from '../catalog/dates';
+import { WATCH_STATUS_LABEL, type Anime, type CatalogDate, type WatchStatus } from '../catalog/types';
 import type { CustomList, ProfileData } from './types';
 
 // Library rules as pure functions: each returns a new profile and never touches storage.
 
 export const WATCH_STATUSES: WatchStatus[] = ['plan', 'watching', 'watched'];
 export const LIST_NAME_MAX = 40;
+export const RATING_MAX = 5;
+export const MAX_PREFERRED_GENRES = 3;
 
 export type Validation = { ok: true; name: string } | { ok: false; error: string };
 export type Result = { ok: true; profile: ProfileData } | { ok: false; error: string };
@@ -27,6 +30,30 @@ export function clearStatus(profile: ProfileData, animeId: number): ProfileData 
 // Saves an untracked title to Plan to watch; a tracked title keeps its status.
 export function quickSave(profile: ProfileData, animeId: number): ProfileData {
   return profile.statuses[animeId] ? profile : setStatus(profile, animeId, 'plan');
+}
+
+export const isValidRating = (rating: number) => Number.isInteger(rating) && rating >= 1 && rating <= RATING_MAX;
+
+// Unreleased titles cannot be rated yet.
+export const canRate = (anime: Anime, now: CatalogDate) => isReleased(anime, now);
+
+// Ratings leave watch status and lists unchanged. Invalid values leave the profile unchanged.
+export function setRating(profile: ProfileData, animeId: number, rating: number): ProfileData {
+  if (!isValidRating(rating) || profile.ratings[animeId] === rating) return profile;
+  return { ...profile, ratings: { ...profile.ratings, [animeId]: rating } };
+}
+
+export function clearRating(profile: ProfileData, animeId: number): ProfileData {
+  if (!(animeId in profile.ratings)) return profile;
+  const { [animeId]: _removed, ...ratings } = profile.ratings;
+  return { ...profile, ratings };
+}
+
+// Adds or removes a preferred genre. A fourth genre is not added.
+export function togglePreferredGenre(profile: ProfileData, genre: string): ProfileData {
+  if (profile.genres.includes(genre)) return { ...profile, genres: profile.genres.filter((g) => g !== genre) };
+  if (profile.genres.length >= MAX_PREFERRED_GENRES) return profile;
+  return { ...profile, genres: [...profile.genres, genre] };
 }
 
 // Names are trimmed and must be unique ignoring case, including the built-in list names.

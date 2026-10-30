@@ -13,8 +13,10 @@ export interface CustomList {
 export interface ProfileData {
   schemaVersion: number;
   displayName: string;
-  genreIds: number[];
+  // Preferred genres by AniList genre name, at most MAX_PREFERRED_GENRES.
+  genres: string[];
   statuses: Record<number, WatchStatus>;
+  // Personal ratings from 1 to 5, separate from the catalog score out of 10.
   ratings: Record<number, number>;
   customLists: CustomList[];
 }
@@ -22,7 +24,7 @@ export interface ProfileData {
 export const emptyProfile = (): ProfileData => ({
   schemaVersion: SCHEMA_VERSION,
   displayName: '',
-  genreIds: [],
+  genres: [],
   statuses: {},
   ratings: {},
   customLists: [],

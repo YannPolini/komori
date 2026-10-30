@@ -26,6 +26,14 @@ export function isRecentRelease(anime: Anime, now: CatalogDate): boolean {
   return compareDates(start, addDays(now, -RELEASE_WINDOW_DAYS)) >= 0 && compareDates(start, now) <= 0;
 }
 
+// A title counts as released from its premiere day on. Without an exact premiere date,
+// the provider's airing status decides.
+export function isReleased(anime: Anime, now: CatalogDate): boolean {
+  const start = anime.startDate;
+  if (start?.month != null && start.day != null) return compareDates(start, now) <= 0;
+  return anime.airingStatus !== 'upcoming';
+}
+
 export function formatDate(date: CatalogDate | null): string {
   if (!date) return 'Date unknown';
   if (date.month == null) return String(date.year);
