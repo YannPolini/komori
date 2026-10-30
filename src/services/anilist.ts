@@ -133,7 +133,8 @@ export interface AnimeListPage {
 }
 
 export interface CatalogClient {
-  searchAnime(filters: MediaFilters, page: number): Promise<AnimeListPage>;
+  // perPage defaults to PAGE_SIZE. AniList allows at most 50.
+  searchAnime(filters: MediaFilters, page: number, perPage?: number): Promise<AnimeListPage>;
   getAnime(id: number): Promise<Anime>;
   getGenres(): Promise<string[]>;
 }
@@ -241,8 +242,8 @@ export function createAniListClient({
   type PageData = { Page: { pageInfo: { hasNextPage: boolean }; media: AniListMedia[] } };
 
   return {
-    searchAnime: async (filters, page) => {
-      const { Page } = await query<PageData>(SEARCH_QUERY, { ...filters, page, perPage: PAGE_SIZE });
+    searchAnime: async (filters, page, perPage = PAGE_SIZE) => {
+      const { Page } = await query<PageData>(SEARCH_QUERY, { ...filters, page, perPage });
       return { items: Page.media.map(toAnime), hasNextPage: Page.pageInfo.hasNextPage };
     },
     getAnime: async (id) => {
