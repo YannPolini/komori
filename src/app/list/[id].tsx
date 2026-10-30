@@ -6,6 +6,7 @@ import { cardMeta } from '../../components/AnimeCard';
 import { Button } from '../../components/Button';
 import { Cover } from '../../components/Cover';
 import { OptionSheet } from '../../components/OptionSheet';
+import { RatingStars, ratingLabel } from '../../components/Rating';
 import { ScreenState } from '../../components/ScreenState';
 import { SearchField } from '../../components/SearchField';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -97,20 +98,26 @@ export default function ListDetail() {
         }
         renderItem={({ item }) => {
           const status = profile.statuses[item.id];
+          const rating = profile.ratings[item.id];
           return (
             <View style={styles.row}>
               <Pressable
                 style={styles.main}
                 onPress={() => router.push({ pathname: '/anime/[id]', params: { id: item.id } })}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.title}${status ? `, ${WATCH_STATUS_LABEL[status]}` : ''}, open details`}
+                accessibilityLabel={[item.title, status && WATCH_STATUS_LABEL[status], rating != null && ratingLabel(rating), 'open details']
+                  .filter(Boolean)
+                  .join(', ')}
               >
                 <Cover uri={item.imageUrl} iconSize={20} style={styles.cover} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={styles.title} numberOfLines={2}>
                     {item.title}
                   </Text>
-                  <Text style={styles.meta}>{cardMeta(item)}</Text>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.meta}>{cardMeta(item)}</Text>
+                    {rating != null && <RatingStars rating={rating} />}
+                  </View>
                   {status && <StatusBadge status={status} />}
                 </View>
               </Pressable>
@@ -162,5 +169,6 @@ const styles = StyleSheet.create({
   failed: { gap: spacing.sm, paddingTop: spacing.sm },
   title: { fontSize: 15, fontWeight: '600', color: colors.text },
   meta: { fontSize: 12, color: colors.textMuted },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

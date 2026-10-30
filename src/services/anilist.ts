@@ -54,11 +54,11 @@ const MEDIA_FIELDS = `
 
 const SEARCH_QUERY = `
   query ($page: Int, $perPage: Int, $search: String, $genre: String, $sort: [MediaSort], $status: MediaStatus,
-         $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt) {
+         $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt, $id_in: [Int]) {
     Page(page: $page, perPage: $perPage) {
       pageInfo { hasNextPage }
       media(type: ANIME, isAdult: false, search: $search, genre: $genre, sort: $sort, status: $status,
-            startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser) { ${MEDIA_FIELDS} }
+            startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser, id_in: $id_in) { ${MEDIA_FIELDS} }
     }
   }`;
 
@@ -125,6 +125,8 @@ export interface MediaFilters {
   status?: string;
   startDate_greater?: number;
   startDate_lesser?: number;
+  // Loads these titles in one request, up to one page of them.
+  id_in?: number[];
 }
 
 export interface AnimeListPage {
@@ -133,7 +135,8 @@ export interface AnimeListPage {
 }
 
 export interface CatalogClient {
-  searchAnime(filters: MediaFilters, page: number): Promise<AnimeListPage>;
+  // perPage defaults to PAGE_SIZE. AniList allows at most 50.
+  searchAnime(filters: MediaFilters, page: number, perPage?: number): Promise<AnimeListPage>;
   getAnime(id: number): Promise<Anime>;
   getGenres(): Promise<string[]>;
 }
@@ -241,8 +244,8 @@ export function createAniListClient({
   type PageData = { Page: { pageInfo: { hasNextPage: boolean }; media: AniListMedia[] } };
 
   return {
-    searchAnime: async (filters, page) => {
-      const { Page } = await query<PageData>(SEARCH_QUERY, { ...filters, page, perPage: PAGE_SIZE });
+    searchAnime: async (filters, page, perPage = PAGE_SIZE) => {
+      const { Page } = await query<PageData>(SEARCH_QUERY, { ...filters, page, perPage });
       return { items: Page.media.map(toAnime), hasNextPage: Page.pageInfo.hasNextPage };
     },
     getAnime: async (id) => {

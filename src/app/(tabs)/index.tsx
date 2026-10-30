@@ -6,8 +6,11 @@ import { AnimeCard } from '../../components/AnimeCard';
 import { ScreenState } from '../../components/ScreenState';
 import { SectionHeader } from '../../components/SectionHeader';
 import { fuzzyDate, today } from '../../features/catalog/dates';
-import { newReleasesFeed, searchFeed, upcomingFeed, type Feed } from '../../features/catalog/feeds';
+import { newReleasesFeed, upcomingFeed, type Feed } from '../../features/catalog/feeds';
 import { useFeed, useGenres } from '../../features/catalog/useCatalog';
+import { useLibrary } from '../../features/library/LibraryProvider';
+import { reasonLabel, reasonText } from '../../features/recommendations/scoring';
+import { useRecommendations } from '../../features/recommendations/useRecommendations';
 import { colors, radius, spacing } from '../../theme';
 import type { DiscoverMode } from './discover';
 
@@ -31,6 +34,44 @@ function FeedRow<C>({ feed, count }: { feed: Feed<C>; count: number }) {
   );
 }
 
+// Up to four suggestions, each with the reason it was picked.
+function Suggestions() {
+  const state = useRecommendations();
+  const library = useLibrary();
+  const noGenres = library.state.status === 'ready' && library.state.profile.genres.length === 0;
+  if (state.status === 'loading') return <ScreenState kind="loading" />;
+  if (state.status === 'error') {
+    return <ScreenState kind="error" message="Suggestions could not be loaded." onRetry={state.retry} />;
+  }
+  return (
+    <>
+      {noGenres && (
+        <Pressable onPress={() => router.push('/account')} accessibilityRole="link" style={styles.hint}>
+          <Text style={styles.hintText}>Pick your favorite genres in Account for better suggestions.</Text>
+        </Pressable>
+      )}
+      {state.suggestions.length === 0 ? (
+        <Text style={styles.empty}>No new suggestions right now. You already track every suitable title.</Text>
+      ) : (
+        <FlatList
+          horizontal
+          data={state.suggestions}
+          keyExtractor={(s) => String(s.anime.id)}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.rowContent}
+          renderItem={({ item }) => (
+            <AnimeCard
+              anime={item.anime}
+              width={140}
+              note={{ text: reasonText(item.reason), label: reasonLabel(item.reason) }}
+            />
+          )}
+        />
+      )}
+    </>
+  );
+}
+
 // Genre shortcuts on Home, shown when the catalog offers them.
 const HOME_GENRES = ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Romance'];
 
@@ -39,11 +80,8 @@ const openDiscover = (mode: DiscoverMode, genre = '') =>
 
 export default function Home() {
   const day = fuzzyDate(today());
-  // Suggestions come with the recommendations issue. Until then Home shows popular titles,
-  // the same feed as the default Discover search.
   const feeds = useMemo(
     () => ({
-      popular: searchFeed({ query: '', genre: null, sort: 'popularity' }),
       releases: newReleasesFeed(today()),
       upcoming: upcomingFeed(today()),
     }),
@@ -65,7 +103,7 @@ export default function Home() {
       </Pressable>
 
       <SectionHeader title="Suggested for you" />
-      <FeedRow feed={feeds.popular} count={4} />
+      <Suggestions />
 
       <SectionHeader title="New releases" onSeeAll={() => openDiscover('new')} />
       <FeedRow feed={feeds.releases} count={3} />
@@ -119,5 +157,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
   },
   chipText: { fontSize: 14, fontWeight: '600', color: colors.primaryDark },
+  hint: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
+  hintText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
   empty: { fontSize: 14, color: colors.textMuted, paddingHorizontal: spacing.md },
 });

@@ -129,6 +129,9 @@ export interface AnimeEntries {
   retry: () => void;
 }
 
+// AniList's largest page, so a list loads with one request per 50 uncached titles.
+const ENTRY_BATCH = 50;
+
 // Resolves the IDs of a personal list, loading entries that are not cached yet.
 export function useAnimeEntries(ids: number[]): AnimeEntries {
   const [attempt, retry] = useReducer((n: number) => n + 1, 0);
@@ -140,16 +143,21 @@ export function useAnimeEntries(ids: number[]): AnimeEntries {
     if (!missingKey) return;
     let active = true;
     setState({ loading: true, failed: false });
-    const requests = missingKey.split(',').map((id) =>
-      anilist.getAnime(Number(id)).then((anime) => {
-        rememberAnime([anime]);
-        if (active) update();
-      }),
-    );
+    const missing = missingKey.split(',').map(Number);
+    const requests: Promise<void>[] = [];
+    for (let i = 0; i < missing.length; i += ENTRY_BATCH) {
+      const batch = missing.slice(i, i + ENTRY_BATCH);
+      requests.push(
+        anilist.searchAnime({ id_in: batch, sort: ['ID'] }, 1, ENTRY_BATCH).then((page) => rememberAnime(page.items)),
+      );
+    }
+    // Titles the catalog no longer returns, e.g. removed entries, count as failed.
     Promise.allSettled(requests).then((results) => {
-      if (active) setState({ loading: false, failed: results.some((r) => r.status === 'rejected') });
+      if (!active) return;
+      const failed = results.some((r) => r.status === 'rejected') || missing.some((id) => !findAnime(id));
+      update();
+      setState({ loading: false, failed });
     });
-    // Runs again as entries arrive. Requests that are still running are shared by the client.
     return () => {
       active = false;
     };

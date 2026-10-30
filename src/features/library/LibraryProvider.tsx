@@ -12,6 +12,9 @@ interface LibraryContextValue {
   setStatus: (animeId: number, status: WatchStatus) => void;
   clearStatus: (animeId: number) => void;
   quickSave: (animeId: number) => void;
+  setRating: (animeId: number, rating: number) => void;
+  clearRating: (animeId: number) => void;
+  togglePreferredGenre: (genre: string) => void;
   // List editing returns an error message for the dialog, or the list on success.
   createList: (name: string) => { id: string } | { error: string };
   renameList: (listId: string, name: string) => { error: string } | null;
@@ -61,6 +64,9 @@ export function LibraryProvider({ repository, children }: { repository: ProfileR
       setStatus: (animeId, status) => dispatch({ type: 'setStatus', animeId, status }),
       clearStatus: (animeId) => dispatch({ type: 'clearStatus', animeId }),
       quickSave: (animeId) => dispatch({ type: 'quickSave', animeId }),
+      setRating: (animeId, rating) => dispatch({ type: 'setRating', animeId, rating }),
+      clearRating: (animeId) => dispatch({ type: 'clearRating', animeId }),
+      togglePreferredGenre: (genre) => dispatch({ type: 'togglePreferredGenre', genre }),
       createList: (name) => {
         const valid = validateListName(name, profile?.customLists ?? []);
         if (!valid.ok) return { error: valid.error };
