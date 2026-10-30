@@ -6,6 +6,7 @@ import { WATCH_STATUS_LABEL, type Anime } from '../features/catalog/types';
 import { useLibrary } from '../features/library/LibraryProvider';
 import { colors, radius, shadow, spacing } from '../theme';
 import { Cover } from './Cover';
+import { RatingStars, ratingLabel } from './Rating';
 import { StatusBadge } from './StatusBadge';
 
 // Upcoming titles show their premiere date, others the year.
@@ -17,12 +18,24 @@ export const cardMeta = (anime: Anime) =>
 interface Props {
   anime: Anime;
   width?: number;
+  // Extra line under the title, e.g. why a title was suggested.
+  note?: { text: string; label: string };
 }
 
-export function AnimeCard({ anime, width }: Props) {
+export function AnimeCard({ anime, width, note }: Props) {
   const library = useLibrary();
-  const status = library.state.status === 'ready' ? library.state.profile.statuses[anime.id] : undefined;
-  const label = `${anime.title}${status ? `, ${WATCH_STATUS_LABEL[status]}` : ''}, open details`;
+  const profile = library.state.status === 'ready' ? library.state.profile : null;
+  const status = profile?.statuses[anime.id];
+  const rating = profile?.ratings[anime.id];
+  const label = [
+    anime.title,
+    status && WATCH_STATUS_LABEL[status],
+    rating != null && ratingLabel(rating),
+    note?.label,
+    'open details',
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   // The save button is also offered as an accessibility action, because screen readers
   // treat the whole card as one element.
@@ -62,6 +75,12 @@ export function AnimeCard({ anime, width }: Props) {
           <Text style={styles.meta} numberOfLines={1}>
             {cardMeta(anime)}
           </Text>
+          {note && (
+            <Text style={styles.note} numberOfLines={2}>
+              {note.text}
+            </Text>
+          )}
+          {rating != null && <RatingStars rating={rating} />}
           {status && (
             <View style={{ marginTop: spacing.xs }}>
               <StatusBadge status={status} />
@@ -92,6 +111,7 @@ const styles = StyleSheet.create({
   body: { padding: spacing.sm + 2, gap: 2 },
   title: { fontSize: 15, fontWeight: '600', color: colors.text },
   meta: { fontSize: 12, color: colors.textMuted },
+  note: { fontSize: 12, fontWeight: '600', color: colors.primaryDark },
   save: {
     position: 'absolute',
     top: spacing.xs,

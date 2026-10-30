@@ -5,12 +5,13 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Button } from '../../components/Button';
 import { Cover } from '../../components/Cover';
 import { ListNameDialog } from '../../components/ListNameDialog';
+import { RatingInput } from '../../components/Rating';
 import { ScreenState } from '../../components/ScreenState';
-import { formatDate } from '../../features/catalog/dates';
+import { formatDate, today } from '../../features/catalog/dates';
 import { WATCH_STATUS_LABEL, type Anime } from '../../features/catalog/types';
 import { useAnime } from '../../features/catalog/useCatalog';
 import { useLibrary } from '../../features/library/LibraryProvider';
-import { WATCH_STATUSES } from '../../features/library/rules';
+import { canRate, WATCH_STATUSES } from '../../features/library/rules';
 import { colors, radius, spacing, statusColors } from '../../theme';
 
 const AIRING_LABEL: Record<Anime['airingStatus'], string> = {
@@ -56,6 +57,7 @@ export default function Details() {
 
   const profile = library.state.profile;
   const status = profile.statuses[anime.id];
+  const rating = profile.ratings[anime.id];
 
   const confirmClear = () =>
     status &&
@@ -105,6 +107,19 @@ export default function Details() {
         <Text style={styles.meta}>No genres listed.</Text>
       )}
       <Text style={styles.synopsis}>{anime.synopsis ?? 'No synopsis available.'}</Text>
+
+      <Text style={styles.section} accessibilityRole="header">
+        Your rating
+      </Text>
+      {canRate(anime, today()) ? (
+        <RatingInput
+          rating={rating}
+          onRate={(r) => library.setRating(anime.id, r)}
+          onClear={() => library.clearRating(anime.id)}
+        />
+      ) : (
+        <Text style={styles.meta}>You can rate this title once it has premiered.</Text>
+      )}
 
       <Text style={styles.section} accessibilityRole="header">
         Watch status
