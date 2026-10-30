@@ -91,6 +91,26 @@ describe('anilist client', () => {
     expect(waits).toEqual([1000, 1000]);
   });
 
+  it('starts the next request only after the previous one has finished', async () => {
+    let finishFirst: (r: Response) => void = () => {};
+    const first = new Promise<Response>((resolve) => (finishFirst = resolve));
+    const fetch = jest.fn().mockReturnValueOnce(first).mockResolvedValueOnce(response(200, { data: { Media: FRIEREN } }));
+    const client = createAniListClient({ fetch, sleep: async () => {} });
+    const a = client.getAnime(1);
+    const b = client.getAnime(2);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    finishFirst(response(200, { data: { Media: FRIEREN } }));
+    await Promise.all([a, b]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('excludes adult titles from details too', async () => {
+    const { client, bodies } = setup([response(404, { data: { Media: null } })]);
+    await expect(client.getAnime(1)).rejects.toMatchObject({ kind: 'notFound' });
+    expect(bodies[0].query).toContain('isAdult: false');
+  });
+
   it('shares one call for identical requests', async () => {
     const { client, fetch } = setup([response(200, { data: { Media: FRIEREN } })]);
     const [a, b] = await Promise.all([client.getAnime(154587), client.getAnime(154587)]);

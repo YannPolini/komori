@@ -62,7 +62,8 @@ const SEARCH_QUERY = `
     }
   }`;
 
-const MEDIA_QUERY = `query ($id: Int) { Media(id: $id, type: ANIME) { ${MEDIA_FIELDS} } }`;
+// Adult titles are left out here too, so a link to one is reported as not found.
+const MEDIA_QUERY = `query ($id: Int) { Media(id: $id, type: ANIME, isAdult: false) { ${MEDIA_FIELDS} } }`;
 
 const GENRES_QUERY = 'query { GenreCollection }';
 
@@ -161,61 +162,72 @@ export function createAniListClient({
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   now = Date.now,
 }: CatalogClientOptions = {}): CatalogClient {
-  let queue: Promise<void> = Promise.resolve();
+  let queue: Promise<unknown> = Promise.resolve();
   let readyAt = 0;
   // Identical requests share one call while it is running.
   const running = new Map<string, Promise<unknown>>();
 
-  // Resolves when it is this request's turn. A rate limit pause moves readyAt forward
-  // for everything still waiting.
-  const turn = () => {
-    queue = queue.then(async () => {
-      const wait = readyAt - now();
-      if (wait > 0) await sleep(wait);
-      readyAt = now() + minInterval;
-    });
-    return queue;
+  // Runs one request at a time, including its retries. A rate limit pause moves readyAt
+  // forward, so the next request waits for it too.
+  const enqueue = <T>(task: () => Promise<T>): Promise<T> => {
+    const result = queue.then(task);
+    queue = result.catch(() => undefined);
+    return result;
   };
 
+  const waitTurn = async () => {
+    const wait = readyAt - now();
+    if (wait > 0) await sleep(wait);
+    readyAt = now() + minInterval;
+  };
+
+  // The timeout also covers reading the body, so a stalled answer cannot block the queue.
   const send = async (body: string) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      return await fetchImpl(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body,
-        signal: controller.signal,
-      });
-    } catch {
-      throw new CatalogError('network', 'The catalog could not be reached.');
+      let response: Response;
+      try {
+        response = await fetchImpl(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body,
+          signal: controller.signal,
+        });
+      } catch {
+        throw new CatalogError('network', 'The catalog could not be reached.');
+      }
+      if (!response.ok) return { response, json: null };
+      try {
+        return { response, json: await response.json() };
+      } catch {
+        throw new CatalogError('server', 'The catalog sent an unreadable answer.');
+      }
     } finally {
       clearTimeout(timer);
     }
   };
 
-  const request = async <T>(body: string): Promise<T> => {
-    for (let attempt = 0; ; attempt++) {
-      await turn();
-      const response = await send(body);
-      if (response.status === 429) {
-        if (attempt >= maxRetries) throw new CatalogError('rateLimit', 'The catalog is busy. Try again in a moment.');
-        const retryAfter = Number(response.headers?.get('Retry-After')) * 1000 || 0;
-        readyAt = Math.max(readyAt, now() + Math.max(retryAfter, retryDelay * 2 ** attempt));
-        continue;
+  const request = <T>(body: string): Promise<T> =>
+    enqueue(async () => {
+      for (let attempt = 0; ; attempt++) {
+        await waitTurn();
+        const { response, json } = await send(body);
+        if (response.status === 429) {
+          if (attempt >= maxRetries) throw new CatalogError('rateLimit', 'The catalog is busy. Try again in a moment.');
+          const retryAfter = Number(response.headers?.get('Retry-After')) * 1000 || 0;
+          readyAt = Math.max(readyAt, now() + Math.max(retryAfter, retryDelay * 2 ** attempt));
+          continue;
+        }
+        if (response.status === 404) throw new CatalogError('notFound', 'This title could not be found.');
+        if (!response.ok) throw new CatalogError('server', `The catalog answered with status ${response.status}.`);
+        const result = json as { data?: T; errors?: unknown[] };
+        if (!result?.data || result.errors?.length) {
+          throw new CatalogError('server', 'The catalog could not answer the request.');
+        }
+        return result.data;
       }
-      if (response.status === 404) throw new CatalogError('notFound', 'This title could not be found.');
-      if (!response.ok) throw new CatalogError('server', `The catalog answered with status ${response.status}.`);
-      let result: { data?: T; errors?: unknown[] };
-      try {
-        result = await response.json();
-      } catch {
-        throw new CatalogError('server', 'The catalog sent an unreadable answer.');
-      }
-      if (!result.data || result.errors?.length) throw new CatalogError('server', 'The catalog could not answer the request.');
-      return result.data;
-    }
-  };
+    });
 
   const query = <T>(text: string, variables: object = {}): Promise<T> => {
     const body = JSON.stringify({ query: text, variables: withoutEmpty(variables) });
