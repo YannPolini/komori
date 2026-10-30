@@ -13,14 +13,23 @@ interface LoadedFeed {
 const loadedFeeds = new Map<string, LoadedFeed>();
 const runningFeeds = new Map<string, Promise<void>>();
 
+// Feeds that filter after loading can return an empty page while more titles follow.
+// Those pages are skipped, so a preview is never empty too early.
+async function loadFilledPage<C>(feed: Feed<C>, cursor: C) {
+  let page = await feed.load(cursor);
+  for (let skipped = 0; !page.items.length && page.next !== null && skipped < 3; skipped++) {
+    page = await feed.load(page.next);
+  }
+  return page;
+}
+
 function loadNextPage<C>(feed: Feed<C>): Promise<void> {
   const running = runningFeeds.get(feed.key);
   if (running) return running;
   const loaded = loadedFeeds.get(feed.key);
   if (loaded && loaded.next === null) return Promise.resolve();
 
-  const promise = feed
-    .load(loaded ? (loaded.next as C) : feed.first)
+  const promise = loadFilledPage(feed, loaded ? (loaded.next as C) : feed.first)
     .then((page) => {
       rememberAnime(page.items);
       // Provider pages can overlap when titles share a sort value.
