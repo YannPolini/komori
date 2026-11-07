@@ -14,6 +14,7 @@ import { signOutOnDevice } from '../features/account/signOut';
 import { useAnimeEntries, useGenres } from '../features/catalog/useCatalog';
 import { useLibrary } from '../features/library/LibraryProvider';
 import { counts, listAnimeIds, MAX_PREFERRED_GENRES } from '../features/library/rules';
+import { useReminders } from '../features/reminders/ReminderProvider';
 import { useCloudSync } from '../features/sync/SyncProvider';
 import { useOffline } from '../services/connectivity';
 import { colors, spacing } from '../theme';
@@ -50,6 +51,7 @@ function GenrePreferences() {
 function SignedInAccount({ email }: { email: string }) {
   const library = useLibrary();
   const sync = useCloudSync();
+  const reminders = useReminders();
   const offline = useOffline();
   const profile = library.state.status === 'ready' ? library.state.profile : null;
   const [draftName, setDraftName] = useState<string | null>(null);
@@ -106,6 +108,7 @@ function SignedInAccount({ email }: { email: string }) {
     setBusy(true);
     setError('');
     let signedOut = false;
+    const clearDeviceData = async () => { await Promise.all([library.repository.clear(), reminders.clear()]); };
     try {
       await library.flushWrites();
       if (syncFirst) {
@@ -117,13 +120,13 @@ function SignedInAccount({ email }: { email: string }) {
       }
       await signOutOnDevice(async () => {
         signedOut = true;
-        await library.repository.clear();
+        await clearDeviceData();
       });
     } catch (reason) {
       if (signedOut) {
         Alert.alert('Could not clear account data', 'You are signed out, but the local account copy could not be cleared.', [
           { text: 'Close', style: 'cancel' },
-          { text: 'Retry cleanup', onPress: () => void library.repository.clear().catch(() => Alert.alert('Cleanup still failed')) },
+          { text: 'Retry cleanup', onPress: () => void clearDeviceData().catch(() => Alert.alert('Cleanup still failed')) },
         ]);
       } else {
         setError(authErrorMessage(reason, 'Could not sign out. Try again.'));
