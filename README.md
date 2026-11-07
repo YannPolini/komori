@@ -8,7 +8,7 @@ Anime discovery and tracking app for Cross Platform Development, WS2026.
 
 ## Current status
 
-Initial project setup only. The app currently displays the course starter's counter screen. Komori's discovery, tracking, accounts, reminders and offline features are planned and are not implemented yet.
+Komori has anime discovery through AniList, watch lists, ratings and recommendations. The Android and iOS apps keep lists, ratings, preferences and saved title details in SQLite so they can be reopened offline. Web previews use browser storage. Accounts, cloud sync and reminders are separate work.
 
 Android is the required course platform. iOS is optional and can also be used for development testing.
 
@@ -58,6 +58,7 @@ On Windows, the usual SDK directory is `%LOCALAPPDATA%\Android\Sdk`. A physical 
 npm run typecheck
 npx expo install --check
 npx expo-doctor
+npm test -- --runInBand
 ```
 
 These check TypeScript and dependency/configuration compatibility. A successful check or bundle export does not establish that the app runs on a device. Automated feature tests will be added with the corresponding features.
@@ -84,3 +85,5 @@ Add navigation, shared state, API access, persistence and native feature package
 ## AI Usage
 
 OpenAI ChatGPT/Codex assisted with the initial repository setup: README, dependency selection, Expo configuration, ignore rules, editor settings and setup checks. The initial counter screen comes from the official course template. Both students are responsible for reviewing, understanding and explaining the submission. Update this section when AI contributes to further implementation.
+
+Codex also assisted with SQLite storage, catalog caching, offline behavior and the storage tests for #17.

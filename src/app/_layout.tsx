@@ -1,12 +1,12 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { HeaderBack } from '../components/HeaderBack';
+import { deviceRepository } from '../features/library/deviceRepository';
+import { LibraryNotice } from '../features/library/LibraryNotice';
 import { LibraryProvider } from '../features/library/LibraryProvider';
-import { createMemoryRepository } from '../features/library/repository';
-import { MOCK_PROFILE } from '../mock/profile';
 import { colors } from '../theme';
 
-const repository = createMemoryRepository(MOCK_PROFILE);
+const repository = deviceRepository('guest');
 
 export default function RootLayout() {
   return (
@@ -26,6 +26,7 @@ export default function RootLayout() {
         <Stack.Screen name="list/[id]" options={{ title: '' }} />
         <Stack.Screen name="account" options={{ title: 'Account' }} />
       </Stack>
+      <LibraryNotice />
     </LibraryProvider>
   );
 }

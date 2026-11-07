@@ -10,7 +10,7 @@ interface Props {
   initialName?: string;
   submitLabel: string;
   // Returns an error message to show, or null when the name was saved.
-  onSubmit: (name: string) => string | null;
+  onSubmit: (name: string) => Promise<string | null>;
   onCancel: () => void;
   onDelete?: () => void;
 }
@@ -18,6 +18,7 @@ interface Props {
 export function ListNameDialog({ visible, title, initialName = '', submitLabel, onSubmit, onCancel, onDelete }: Props) {
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -26,7 +27,15 @@ export function ListNameDialog({ visible, title, initialName = '', submitLabel, 
     }
   }, [visible, initialName]);
 
-  const submit = () => setError(onSubmit(name));
+  const submit = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      setError(await onSubmit(name));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
@@ -60,7 +69,7 @@ export function ListNameDialog({ visible, title, initialName = '', submitLabel, 
           </View>
           <View style={styles.actions}>
             <Button label="Cancel" variant="outline" onPress={onCancel} />
-            <Button label={submitLabel} onPress={submit} />
+            <Button label={saving ? 'Saving…' : submitLabel} onPress={submit} disabled={saving} />
           </View>
           {onDelete && (
             <Pressable onPress={onDelete} accessibilityRole="button" style={styles.delete}>

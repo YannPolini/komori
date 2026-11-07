@@ -118,7 +118,7 @@ export default function Discover() {
 
       {results.status === 'loading' && <ScreenState kind="loading" />}
       {results.status === 'error' && (
-        <ScreenState kind="error" message="Titles could not be loaded." onRetry={results.retry} />
+        <ScreenState kind="error" message={results.offline ? 'Connect to the internet to load results that aren’t saved.' : 'Titles could not be loaded.'} onRetry={results.retry} />
       )}
       {results.status === 'ready' && (
         <FlatList

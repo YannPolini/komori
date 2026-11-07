@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import type { WatchStatus } from '../catalog/types';
-import { libraryReducer, type LibraryState } from './reducer';
+import { libraryReducer, type LibraryAction, type LibraryState } from './reducer';
 import type { ProfileRepository } from './repository';
 import { validateListName } from './rules';
 import type { ProfileData } from './types';
@@ -9,15 +9,18 @@ import { randomUUID } from './uuid';
 interface LibraryContextValue {
   state: LibraryState;
   retry: () => void;
+  saveError: boolean;
+  dismissSaveError: () => void;
+  flushWrites: () => Promise<void>;
+  setDisplayName: (name: string) => Promise<boolean>;
   setStatus: (animeId: number, status: WatchStatus) => void;
   clearStatus: (animeId: number) => void;
   quickSave: (animeId: number) => void;
   setRating: (animeId: number, rating: number) => void;
   clearRating: (animeId: number) => void;
   togglePreferredGenre: (genre: string) => void;
-  // List editing returns an error message for the dialog, or the list on success.
-  createList: (name: string) => { id: string } | { error: string };
-  renameList: (listId: string, name: string) => { error: string } | null;
+  createList: (name: string, animeId?: number) => Promise<{ id: string } | { error: string }>;
+  renameList: (listId: string, name: string) => Promise<{ error: string } | null>;
   deleteList: (listId: string) => void;
   addToList: (listId: string, animeId: number) => void;
   removeFromList: (listId: string, animeId: number) => void;
@@ -26,67 +29,94 @@ interface LibraryContextValue {
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
+function reduce(profile: ProfileData, ...actions: LibraryAction[]) {
+  let next: LibraryState = { status: 'ready', profile };
+  for (const action of actions) next = libraryReducer(next, action);
+  return next.status === 'ready' ? next.profile : profile;
+}
+
 export function LibraryProvider({ repository, children }: { repository: ProfileRepository; children: ReactNode }) {
   const [state, dispatch] = useReducer(libraryReducer, { status: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  const [saveError, setSaveError] = useState(false);
   const saved = useRef<ProfileData | null>(null);
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const scope = useRef<object | null>(null);
 
   useEffect(() => {
-    let active = true;
+    const current = {};
+    scope.current = current;
+    saved.current = null;
     dispatch({ type: 'load' });
     repository.load().then(
       (profile) => {
-        if (!active) return;
+        if (scope.current !== current) return;
         saved.current = profile;
         dispatch({ type: 'loaded', profile });
       },
-      () => active && dispatch({ type: 'loadFailed' }),
+      () => scope.current === current && dispatch({ type: 'loadFailed' }),
     );
-    return () => {
-      active = false;
-    };
+    return () => { scope.current = null; };
   }, [repository, attempt]);
 
-  // Saves after every change, but not the profile that was just loaded.
-  useEffect(() => {
-    if (state.status !== 'ready' || state.profile === saved.current) return;
-    saved.current = state.profile;
-    repository.save(state.profile).catch((e) => console.warn('Profile could not be saved', e));
-  }, [repository, state]);
+  const edit = useCallback(<T,>(apply: (profile: ProfileData) => { profile: ProfileData; result: T }): Promise<T> => {
+    const current = scope.current;
+    const next = queue.current.then(async () => {
+      if (!current || scope.current !== current || !saved.current) throw new Error('Profile unavailable');
+      const change = apply(saved.current);
+      if (change.profile === saved.current) return change.result;
+      try {
+        await repository.save(change.profile);
+      } catch (error) {
+        if (scope.current === current) setSaveError(true);
+        throw error;
+      }
+      if (scope.current === current) {
+        saved.current = change.profile;
+        dispatch({ type: 'loaded', profile: change.profile });
+      }
+      return change.result;
+    });
+    // Failed writes leave the last saved profile visible and do not block later edits.
+    queue.current = next.catch(() => {});
+    return next;
+  }, [repository]);
 
-  const profile = state.status === 'ready' ? state.profile : null;
+  const change = useCallback((action: LibraryAction) =>
+    edit((profile) => ({ profile: reduce(profile, action), result: true })).catch(() => false), [edit]);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
-  const value = useMemo<LibraryContextValue>(
-    () => ({
-      state,
-      retry,
-      setStatus: (animeId, status) => dispatch({ type: 'setStatus', animeId, status }),
-      clearStatus: (animeId) => dispatch({ type: 'clearStatus', animeId }),
-      quickSave: (animeId) => dispatch({ type: 'quickSave', animeId }),
-      setRating: (animeId, rating) => dispatch({ type: 'setRating', animeId, rating }),
-      clearRating: (animeId) => dispatch({ type: 'clearRating', animeId }),
-      togglePreferredGenre: (genre) => dispatch({ type: 'togglePreferredGenre', genre }),
-      createList: (name) => {
-        const valid = validateListName(name, profile?.customLists ?? []);
-        if (!valid.ok) return { error: valid.error };
-        const id = randomUUID();
-        dispatch({ type: 'createList', id, name: valid.name });
-        return { id };
-      },
-      renameList: (listId, name) => {
-        const valid = validateListName(name, profile?.customLists ?? [], listId);
-        if (!valid.ok) return { error: valid.error };
-        dispatch({ type: 'renameList', listId, name: valid.name });
-        return null;
-      },
-      deleteList: (listId) => dispatch({ type: 'deleteList', listId }),
-      addToList: (listId, animeId) => dispatch({ type: 'addToList', listId, animeId }),
-      removeFromList: (listId, animeId) => dispatch({ type: 'removeFromList', listId, animeId }),
-      moveToList: (fromId, toId, animeId) => dispatch({ type: 'moveToList', fromId, toId, animeId }),
-    }),
-    [state, profile, retry],
-  );
+  const value = useMemo<LibraryContextValue>(() => ({
+    state,
+    retry,
+    saveError,
+    dismissSaveError: () => setSaveError(false),
+    flushWrites: async () => { await queue.current; },
+    setDisplayName: (name) => change({ type: 'setDisplayName', name }),
+    setStatus: (animeId, status) => void change({ type: 'setStatus', animeId, status }),
+    clearStatus: (animeId) => void change({ type: 'clearStatus', animeId }),
+    quickSave: (animeId) => void change({ type: 'quickSave', animeId }),
+    setRating: (animeId, rating) => void change({ type: 'setRating', animeId, rating }),
+    clearRating: (animeId) => void change({ type: 'clearRating', animeId }),
+    togglePreferredGenre: (genre) => void change({ type: 'togglePreferredGenre', genre }),
+    createList: (name, animeId) => edit<{ id: string } | { error: string }>((profile) => {
+      const valid = validateListName(name, profile.customLists);
+      if (!valid.ok) return { profile, result: { error: valid.error } };
+      const id = randomUUID();
+      const created = reduce(profile, { type: 'createList', id, name: valid.name });
+      const next = animeId == null ? created : reduce(created, { type: 'addToList', listId: id, animeId });
+      return { profile: next, result: { id } };
+    }).catch(() => ({ error: 'The list could not be saved. Try again.' })),
+    renameList: (listId, name) => edit<{ error: string } | null>((profile) => {
+      const valid = validateListName(name, profile.customLists, listId);
+      if (!valid.ok) return { profile, result: { error: valid.error } };
+      return { profile: reduce(profile, { type: 'renameList', listId, name: valid.name }), result: null };
+    }).catch(() => ({ error: 'The list could not be renamed. Try again.' })),
+    deleteList: (listId) => void change({ type: 'deleteList', listId }),
+    addToList: (listId, animeId) => void change({ type: 'addToList', listId, animeId }),
+    removeFromList: (listId, animeId) => void change({ type: 'removeFromList', listId, animeId }),
+    moveToList: (fromId, toId, animeId) => void change({ type: 'moveToList', fromId, toId, animeId }),
+  }), [state, saveError, retry, edit, change]);
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }

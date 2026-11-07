@@ -47,12 +47,12 @@ export default function Lists() {
     ...profile.customLists.map((l) => ({ id: l.id, name: l.name, count: count[l.id], custom: l })),
   ].filter((r) => r.name.toLowerCase().includes(query.trim().toLowerCase()));
 
-  const submit = (name: string) => {
+  const submit = async (name: string) => {
     if (editing === 'new') {
-      const result = library.createList(name);
+      const result = await library.createList(name);
       if ('error' in result) return result.error;
     } else if (editing) {
-      const result = library.renameList(editing.id, name);
+      const result = await library.renameList(editing.id, name);
       if (result) return result.error;
     }
     setEditing(null);
