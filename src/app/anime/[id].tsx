@@ -49,7 +49,7 @@ export default function Details() {
     return <ScreenState kind="error" message="Your lists could not be loaded." onRetry={library.retry} />;
   }
   if (catalog.status === 'error') {
-    return <ScreenState kind="error" message="This title could not be loaded." onRetry={catalog.retry} />;
+    return <ScreenState kind="error" message={catalog.offline ? 'This title isn’t saved on this device. Connect to the internet to open it.' : 'This title could not be loaded.'} onRetry={catalog.retry} />;
   }
   if (catalog.status === 'notFound') return <ScreenState kind="empty" message="This title could not be found." />;
 
@@ -71,10 +71,9 @@ export default function Details() {
     );
 
   // A list created here starts with this title in it.
-  const createList = (name: string) => {
-    const result = library.createList(name);
+  const createList = async (name: string) => {
+    const result = await library.createList(name, anime.id);
     if ('error' in result) return result.error;
-    library.addToList(result.id, anime.id);
     setCreating(false);
     return null;
   };

@@ -5,19 +5,23 @@ interface Props {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'outline';
+  disabled?: boolean;
 }
 
-export function Button({ label, onPress, variant = 'primary' }: Props) {
+export function Button({ label, onPress, variant = 'primary', disabled = false }: Props) {
   const primary = variant === 'primary';
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         primary ? styles.primary : styles.outline,
         pressed && { opacity: 0.8 },
+        disabled && { opacity: 0.5 },
       ]}
     >
       <Text style={[styles.label, { color: primary ? '#fff' : colors.primary }]}>{label}</Text>

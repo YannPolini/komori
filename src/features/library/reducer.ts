@@ -11,6 +11,7 @@ export type LibraryAction =
   | { type: 'load' }
   | { type: 'loaded'; profile: ProfileData }
   | { type: 'loadFailed' }
+  | { type: 'setDisplayName'; name: string }
   | { type: 'setStatus'; animeId: number; status: WatchStatus }
   | { type: 'clearStatus'; animeId: number }
   | { type: 'quickSave'; animeId: number }
@@ -27,6 +28,10 @@ export type LibraryAction =
 // Invalid list names leave the state unchanged; screens validate first to show the error.
 function apply(profile: ProfileData, action: LibraryAction): ProfileData {
   switch (action.type) {
+    case 'setDisplayName': {
+      const displayName = action.name.trim().slice(0, 60);
+      return displayName === profile.displayName ? profile : { ...profile, displayName };
+    }
     case 'setStatus':
       return rules.setStatus(profile, action.animeId, action.status);
     case 'clearStatus':
