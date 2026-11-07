@@ -12,6 +12,7 @@ import { WATCH_STATUS_LABEL, type Anime } from '../../features/catalog/types';
 import { useAnime } from '../../features/catalog/useCatalog';
 import { useLibrary } from '../../features/library/LibraryProvider';
 import { canRate, WATCH_STATUSES } from '../../features/library/rules';
+import { ReminderControls } from '../../features/reminders/ReminderControls';
 import { colors, radius, spacing, statusColors } from '../../theme';
 
 const AIRING_LABEL: Record<Anime['airingStatus'], string> = {
@@ -147,6 +148,8 @@ export default function Details() {
       ) : (
         <Button label="Add to Plan to watch" onPress={() => library.quickSave(anime.id)} />
       )}
+
+      {status && <ReminderControls animeId={anime.id} title={anime.title} />}
 
       <Text style={styles.section} accessibilityRole="header">
         Custom lists

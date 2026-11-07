@@ -8,7 +8,9 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-notifications",
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "komori",
     "web": {
