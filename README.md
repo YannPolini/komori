@@ -50,7 +50,7 @@ npm run android
 
 On Windows, the usual SDK directory is `%LOCALAPPDATA%\Android\Sdk`. A physical Android device with compatible Expo Go is another option.
 
-For accounts, set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in a local `.env` and restart Expo. Use a publishable key, never a secret or service-role key. Enable email/password sign-in and email confirmation in the Supabase project. The default confirmation link works if the user returns to Komori to sign in. To use in-app verification codes, include `{{ .Token }}` in the Confirm signup email template.
+For accounts, set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in a local `.env` (copy `.env.example`) and restart Expo. Use a publishable key, never a secret or service-role key. Enable email/password sign-in and email confirmation in the Supabase project. The default confirmation link works if the user returns to Komori to sign in. To use in-app verification codes, include `{{ .Token }}` in the Confirm signup email template.
 
 The guest library works without Supabase. It is separate from signed-in libraries. Native sessions use SecureStore. Web previews hold sessions in memory and ask you to sign in again after a reload.
 
@@ -69,16 +69,31 @@ npx expo-doctor
 npm test -- --runInBand
 ```
 
-These check TypeScript and dependency/configuration compatibility. A successful check or bundle export does not establish that the app runs on a device. Automated feature tests will be added with the corresponding features.
+These check TypeScript, dependency/configuration compatibility and the automated tests. A successful check does not establish that the app runs on a device, so features were also tested manually during development.
 
-Initial setup verification on 14 October 2026: TypeScript passed, Expo dependency versions matched, Expo Doctor passed all 18 checks, and the Android bundle export succeeded. Device testing has not been completed.
+Jest tests live in `__tests__` folders next to the code they cover. They test the library and rating rules, recommendation scoring, the AniList client (with fixed sample responses in `src/services/__fixtures__/`), catalog feeds, the SQLite profile store, secure session storage, cloud sync and conflicts, and reminders.
 
-The dependency audit still reports 35 findings (12 moderate, 23 high) after compatible updates. These include transitive build/tooling dependencies. The audit's forced upgrade suggestions conflict with the selected Expo/React Native versions, so they were not applied. Review the findings again when upgrading the framework.
+Verification on 7 November 2026 (`dev` after #12-#19): TypeScript passed and all 73 tests in 8 suites passed. Features were tested manually on Android.
+
+`npm audit` reports 30 findings (7 low, 16 moderate, 7 high) on 7 November 2026. These include transitive build/tooling dependencies. The audit's forced upgrade suggestions conflict with the selected Expo/React Native versions, so they were not applied. Review the findings again when upgrading the framework.
 
 ## Files
 
-- `App.tsx`: course starter screen and app entry component.
-- `app.json`: app name and Expo configuration.
+- `src/app/`: Expo Router screens. `(tabs)/` holds Home, Discover and Lists; `anime/[id].tsx` is Details, `list/[id].tsx` a list, `account.tsx` the account screen. `_layout.tsx` files define the stack, tabs and app-wide providers.
+- `src/components/`: shared UI such as cards, rating input, loading/error states and dialogs.
+- `src/features/catalog/`: catalog model, feeds, release dates, caching and data hooks.
+- `src/features/library/`: watch status, list and rating rules, the profile reducer, shared library state and the local profile repository.
+- `src/features/recommendations/`: candidate selection, scoring and reasons.
+- `src/features/account/`: Supabase Auth, secure session storage, sign-in and sign-out.
+- `src/features/sync/`: cloud profile sync with revision checks and conflict choices.
+- `src/features/reminders/`: local watch reminders and notification handling.
+- `src/services/`: AniList GraphQL client and connectivity check.
+- `src/storage/`: SQLite record store (browser storage for web previews).
+- `src/theme.ts`: colors, spacing and radii.
+- `supabase/migrations/`: private profile table, owner policies and the revision-checked save function.
+- `.env.example`: the two Supabase variables needed for accounts and sync.
+- `App.tsx`: course starter screen, kept from the template. The app entry is `expo-router/entry` (see `package.json`).
+- `app.json`: app name, scheme and Expo plugins.
 - `package.json` / `package-lock.json`: scripts and dependency versions.
 - `tsconfig.json`: strict TypeScript configuration.
 - `.gitignore`: excludes dependencies, generated output, local settings and secrets.
@@ -88,11 +103,16 @@ The dependency audit still reports 35 findings (12 moderate, 23 high) after comp
 
 Both students should make meaningful commits under their own Git identities. For each small change, create a branch, commit it, push it and open a pull request for the other teammate to review. Use `npm ci` after cloning or pulling dependency changes. Commit the lockfile whenever dependencies change.
 
-Add navigation, shared state, API access, persistence and native feature packages when those features are started. Never commit credentials or `.env` files. Values shipped in a client app are not secret merely because they come from an environment variable.
+Never commit credentials or `.env` files. Values shipped in a client app are not secret merely because they come from an environment variable.
 
 ## AI Usage
 
 OpenAI ChatGPT/Codex assisted with the initial repository setup: README, dependency selection, Expo configuration, ignore rules, editor settings and setup checks. The initial counter screen comes from the official course template. Both students are responsible for reviewing, understanding and explaining the submission. Update this section when AI contributes to further implementation.
+
+For #12, Claude and Codex assisted with the tab and stack navigation, the app header and the shared loading and error states.
+For #13, Claude and Codex assisted with the AniList catalog client, rate limiting, catalog feeds and release dates, the switch from Jikan to AniList, and the catalog tests.
+For #14, Claude and Codex assisted with the watch status and custom list rules, the shared library state, the Lists and list detail screens, the Jest setup and the rules tests.
+For #15, Claude and Codex assisted with the rating and genre preference rules, recommendation scoring and candidates, the rating and genre screens, and the related tests.
 
 Codex also assisted with SQLite storage, catalog caching, offline behavior and the storage tests for #17.
 For #16, Codex assisted with the account screen, Supabase Auth integration, secure session storage and account tests.

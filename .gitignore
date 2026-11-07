@@ -14,6 +14,7 @@ coverage/
 
 # Environment variables and signing credentials
 .env*
+!.env.example
 *.jks
 *.keystore
 *.p8
