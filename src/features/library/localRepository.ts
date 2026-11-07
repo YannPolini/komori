@@ -21,6 +21,7 @@ export function createLocalProfileRepository(
   restoreTitles: (titles: Anime[]) => void,
 ): LocalProfileRepository {
   let queue: Promise<unknown> = Promise.resolve();
+  let retired = false;
   function serial<T>(run: () => Promise<T>): Promise<T> {
     const next = queue.then(run, run);
     queue = next;
@@ -43,6 +44,7 @@ export function createLocalProfileRepository(
       return stored?.profile ?? emptyProfile();
     }),
     save: (profile) => serial(async () => {
+      if (retired) throw new Error('This profile has been signed out');
       const previous = await read();
       const saved = new Map(previous?.savedTitles.map((title) => [title.id, title]));
       const ids = new Set([
@@ -56,6 +58,9 @@ export function createLocalProfileRepository(
       });
       await store.put<LocalProfile>('profile', owner, { profile, savedTitles, pendingSync: owner !== 'guest' });
     }),
-    clear: () => serial(() => store.remove('profile', owner)),
+    clear: () => serial(async () => {
+      await store.remove('profile', owner);
+      retired = true;
+    }),
   };
 }

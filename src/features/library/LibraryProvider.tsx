@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import type { WatchStatus } from '../catalog/types';
 import { libraryReducer, type LibraryAction, type LibraryState } from './reducer';
-import type { ProfileRepository } from './repository';
+import type { LocalProfileRepository } from './localRepository';
 import { validateListName } from './rules';
 import type { ProfileData } from './types';
 import { randomUUID } from './uuid';
 
 interface LibraryContextValue {
   state: LibraryState;
+  repository: LocalProfileRepository;
   retry: () => void;
   saveError: boolean;
   dismissSaveError: () => void;
@@ -35,7 +36,7 @@ function reduce(profile: ProfileData, ...actions: LibraryAction[]) {
   return next.status === 'ready' ? next.profile : profile;
 }
 
-export function LibraryProvider({ repository, children }: { repository: ProfileRepository; children: ReactNode }) {
+export function LibraryProvider({ repository, children }: { repository: LocalProfileRepository; children: ReactNode }) {
   const [state, dispatch] = useReducer(libraryReducer, { status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [saveError, setSaveError] = useState(false);
@@ -88,6 +89,7 @@ export function LibraryProvider({ repository, children }: { repository: ProfileR
 
   const value = useMemo<LibraryContextValue>(() => ({
     state,
+    repository,
     retry,
     saveError,
     dismissSaveError: () => setSaveError(false),
@@ -116,7 +118,7 @@ export function LibraryProvider({ repository, children }: { repository: ProfileR
     addToList: (listId, animeId) => void change({ type: 'addToList', listId, animeId }),
     removeFromList: (listId, animeId) => void change({ type: 'removeFromList', listId, animeId }),
     moveToList: (fromId, toId, animeId) => void change({ type: 'moveToList', fromId, toId, animeId }),
-  }), [state, saveError, retry, edit, change]);
+  }), [state, repository, saveError, retry, edit, change]);
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }

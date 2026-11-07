@@ -8,7 +8,7 @@ Anime discovery and tracking app for Cross Platform Development, WS2026.
 
 ## Current status
 
-Komori has anime discovery through AniList, watch lists, ratings and recommendations. The Android and iOS apps keep lists, ratings, preferences and saved title details in SQLite so they can be reopened offline. Web previews use browser storage. Accounts, cloud sync and reminders are separate work.
+Komori has anime discovery through AniList, watch lists, ratings and recommendations. The Android and iOS apps keep lists, ratings, preferences and saved title details in SQLite so they can be reopened offline. Web previews use browser storage. Accounts use Supabase Auth. Cross-device sync and reminders are separate work.
 
 Android is the required course platform. iOS is optional and can also be used for development testing.
 
@@ -50,6 +50,10 @@ npm run android
 
 On Windows, the usual SDK directory is `%LOCALAPPDATA%\Android\Sdk`. A physical Android device with compatible Expo Go is another option.
 
+For accounts, set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in a local `.env` and restart Expo. Use a publishable key, never a secret or service-role key. Enable email/password sign-in and email confirmation in the Supabase project. The default confirmation link works if the user returns to Komori to sign in. To use in-app verification codes, include `{{ .Token }}` in the Confirm signup email template.
+
+The guest library works without Supabase. It is separate from signed-in libraries. Native sessions use SecureStore. Web previews hold sessions in memory and ask you to sign in again after a reload.
+
 `npm run ios` opens an iOS simulator and requires macOS and Xcode. It is not needed to test this starter on an iPhone through Expo Go from Windows.
 
 ## Checks
@@ -87,3 +91,4 @@ Add navigation, shared state, API access, persistence and native feature package
 OpenAI ChatGPT/Codex assisted with the initial repository setup: README, dependency selection, Expo configuration, ignore rules, editor settings and setup checks. The initial counter screen comes from the official course template. Both students are responsible for reviewing, understanding and explaining the submission. Update this section when AI contributes to further implementation.
 
 Codex also assisted with SQLite storage, catalog caching, offline behavior and the storage tests for #17.
+For #16, Codex assisted with the account screen, Supabase Auth integration, secure session storage and account tests.
