@@ -13,6 +13,7 @@ interface LibraryContextValue {
   saveError: boolean;
   dismissSaveError: () => void;
   flushWrites: () => Promise<void>;
+  replaceFromCloud: (profile: ProfileData, revision: number, expectedEdit: number) => Promise<boolean>;
   setDisplayName: (name: string) => Promise<boolean>;
   setStatus: (animeId: number, status: WatchStatus) => void;
   clearStatus: (animeId: number) => void;
@@ -85,6 +86,20 @@ export function LibraryProvider({ repository, children }: { repository: LocalPro
 
   const change = useCallback((action: LibraryAction) =>
     edit((profile) => ({ profile: reduce(profile, action), result: true })).catch(() => false), [edit]);
+  const replaceFromCloud = useCallback((profile: ProfileData, revision: number, expectedEdit: number) => {
+    const current = scope.current;
+    const next = queue.current.then(async () => {
+      if (!current || scope.current !== current) return false;
+      if (!await repository.acceptCloud(profile, revision, expectedEdit)) return false;
+      if (scope.current === current) {
+        saved.current = profile;
+        dispatch({ type: 'loaded', profile });
+      }
+      return true;
+    });
+    queue.current = next.catch(() => {});
+    return next;
+  }, [repository]);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   const value = useMemo<LibraryContextValue>(() => ({
@@ -94,6 +109,7 @@ export function LibraryProvider({ repository, children }: { repository: LocalPro
     saveError,
     dismissSaveError: () => setSaveError(false),
     flushWrites: async () => { await queue.current; },
+    replaceFromCloud,
     setDisplayName: (name) => change({ type: 'setDisplayName', name }),
     setStatus: (animeId, status) => void change({ type: 'setStatus', animeId, status }),
     clearStatus: (animeId) => void change({ type: 'clearStatus', animeId }),
@@ -118,7 +134,7 @@ export function LibraryProvider({ repository, children }: { repository: LocalPro
     addToList: (listId, animeId) => void change({ type: 'addToList', listId, animeId }),
     removeFromList: (listId, animeId) => void change({ type: 'removeFromList', listId, animeId }),
     moveToList: (fromId, toId, animeId) => void change({ type: 'moveToList', fromId, toId, animeId }),
-  }), [state, repository, saveError, retry, edit, change]);
+  }), [state, repository, saveError, retry, edit, change, replaceFromCloud]);
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }

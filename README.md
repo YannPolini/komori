@@ -8,7 +8,7 @@ Anime discovery and tracking app for Cross Platform Development, WS2026.
 
 ## Current status
 
-Komori has anime discovery through AniList, watch lists, ratings and recommendations. The Android and iOS apps keep lists, ratings, preferences and saved title details in SQLite so they can be reopened offline. Web previews use browser storage. Accounts use Supabase Auth. Cross-device sync and reminders are separate work.
+Komori has anime discovery through AniList, watch lists, ratings and recommendations. The Android and iOS apps keep lists, ratings, preferences and saved title details in SQLite so they can be reopened offline. Web previews use browser storage. Accounts use Supabase Auth and can sync their library between devices. Reminders are separate work.
 
 Android is the required course platform. iOS is optional and can also be used for development testing.
 
@@ -54,6 +54,8 @@ For accounts, set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHAB
 
 The guest library works without Supabase. It is separate from signed-in libraries. Native sessions use SecureStore. Web previews hold sessions in memory and ask you to sign in again after a reload.
 
+For sync, apply [the profile migration](supabase/migrations/20261107180000_komori_profiles.sql) to that Supabase project. It creates the private profile table and the revision-checked save function. If two devices change the same revision, use Account to choose which copy to keep.
+
 `npm run ios` opens an iOS simulator and requires macOS and Xcode. It is not needed to test this starter on an iPhone through Expo Go from Windows.
 
 ## Checks
@@ -92,3 +94,4 @@ OpenAI ChatGPT/Codex assisted with the initial repository setup: README, depende
 
 Codex also assisted with SQLite storage, catalog caching, offline behavior and the storage tests for #17.
 For #16, Codex assisted with the account screen, Supabase Auth integration, secure session storage and account tests.
+For #18, Codex assisted with the private profile migration, revision checks, sync and conflict handling, and tests.

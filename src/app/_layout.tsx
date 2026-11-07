@@ -8,6 +8,7 @@ import { accountOwner } from '../features/account/client';
 import { deviceRepository } from '../features/library/deviceRepository';
 import { LibraryNotice } from '../features/library/LibraryNotice';
 import { LibraryProvider } from '../features/library/LibraryProvider';
+import { SyncProvider } from '../features/sync/SyncProvider';
 import { colors } from '../theme';
 
 function AccountLibrary() {
@@ -20,6 +21,7 @@ function AccountLibrary() {
   }
   return (
     <LibraryProvider key={owner} repository={repository}>
+      <SyncProvider>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -36,6 +38,7 @@ function AccountLibrary() {
         <Stack.Screen name="account" options={{ title: 'Account' }} />
       </Stack>
       <LibraryNotice />
+      </SyncProvider>
     </LibraryProvider>
   );
 }
