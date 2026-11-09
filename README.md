@@ -12,6 +12,10 @@ Komori has anime discovery through AniList, watch lists, ratings and recommendat
 
 Android is the required course platform. iOS is optional and can also be used for development testing.
 
+## Screenshot
+
+<img src="assets/komori-home-android.png" alt="Komori on Android, showing anime suggestions and new releases" width="320">
+
 ## Starter and framework
 
 Based on the [official FHTW-CPD React Native / Expo template](https://github.com/FHTW-CPD/starter-react-native-expo), revision `c13dce216551ca96805b9c6d4da041a7516be06a`. Its `App.tsx` and strict TypeScript configuration are preserved. The starter files were imported into the team's existing empty repository.
